@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>GoldenEye — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/app.css"/>
+</head>
+<body class="h-full flex items-center justify-center bg-neu-base font-body text-neu-fg p-6">
+
+<div class="w-full max-w-sm">
+
+  <!-- Logo -->
+  <div class="flex flex-col items-center mb-10">
+    <div class="w-20 h-20 rounded-[32px] bg-neu-base shadow-neu flex items-center justify-center mb-5 animate-float">
+      <div class="w-12 h-12 rounded-2xl bg-neu-base shadow-neu-inset flex items-center justify-center">
+        <svg class="w-7 h-7 text-neu-accent" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+          <line x1="12" y1="3" x2="12" y2="6"/>
+          <line x1="12" y1="18" x2="12" y2="21"/>
+          <line x1="3" y1="12" x2="6" y2="12"/>
+          <line x1="18" y1="12" x2="21" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <h1 class="font-display font-extrabold tracking-widest text-neu-fg text-2xl">GOLDENEYE</h1>
+    <p class="text-neu-muted text-sm mt-1.5 font-medium">Self-Hosted NVR</p>
+  </div>
+
+  {{if .Error}}
+  <div class="mb-5 px-4 py-3 rounded-2xl shadow-neu-inset-sm text-red-500 text-sm text-center font-medium">
+    {{.Error}}
+  </div>
+  {{end}}
+
+  <!-- Login card -->
+  <div class="bg-neu-base shadow-neu rounded-[32px] p-8">
+    <form method="POST" action="/login" class="space-y-5">
+      <div>
+        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Username</label>
+        <input
+          type="text" name="username" autocomplete="username" required autofocus
+          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg placeholder:text-neu-muted focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"
+        />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Password</label>
+        <input
+          type="password" name="password" autocomplete="current-password" required
+          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg placeholder:text-neu-muted focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"
+        />
+      </div>
+      <button
+        type="submit"
+        class="w-full mt-2 py-3.5 rounded-2xl bg-neu-accent text-white font-display font-semibold tracking-wide shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base"
+      >
+        Sign In
+      </button>
+    </form>
+  </div>
+
+</div>
+
+</body>
+</html>

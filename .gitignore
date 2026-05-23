@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# GoldenEye
+bin/
+recordings/
+*.config-*.json.tmp

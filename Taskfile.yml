@@ -1,0 +1,135 @@
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  MEDIAMTX_VERSION: v1.9.3
+  MEDIAMTX_BIN: ./bin/mediamtx
+  TAILWIND_VERSION: v3.4.17
+  TAILWIND_BIN: ./bin/tailwindcss
+  HLSJS_VERSION: "1.5.13"
+  HLSJS_OUT: ./internal/web/static/hls.min.js
+
+tasks:
+  # ── Dev ─────────────────────────────────────────────────────────────────────
+  run:
+    desc: "Run GoldenEye (loads .env)"
+    cmds:
+      - go run .
+
+  build:
+    desc: "Build static binary"
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/goldeneye .
+
+  dev:
+    desc: "Start mediamtx + Tailwind watcher + GoldenEye"
+    deps: [mediamtx-ensure, tailwind-ensure, hlsjs-ensure]
+    cmds:
+      - |
+        {{.MEDIAMTX_BIN}} mediamtx.yml &
+        MEDIAMTX_PID=$!
+        {{.TAILWIND_BIN}} -i internal/web/static/input.css -o internal/web/static/app.css --watch &
+        TW_PID=$!
+        go run .
+        kill $MEDIAMTX_PID $TW_PID 2>/dev/null || true
+
+  # ── CSS ─────────────────────────────────────────────────────────────────────
+  css:
+    desc: "Build Tailwind CSS"
+    deps: [tailwind-ensure, hlsjs-ensure]
+    cmds:
+      - "{{.TAILWIND_BIN}} -i internal/web/static/input.css -o internal/web/static/app.css --minify"
+
+  css-watch:
+    desc: "Watch and rebuild Tailwind CSS"
+    deps: [tailwind-ensure]
+    cmds:
+      - "{{.TAILWIND_BIN}} -i internal/web/static/input.css -o internal/web/static/app.css --watch"
+
+  hlsjs-ensure:
+    desc: "Download hls.js if absent"
+    cmds:
+      - |
+        if [ ! -f "{{.HLSJS_OUT}}" ]; then
+          echo "Downloading hls.js {{.HLSJS_VERSION}}..."
+          curl -sLo {{.HLSJS_OUT}} \
+            https://cdn.jsdelivr.net/npm/hls.js@{{.HLSJS_VERSION}}/dist/hls.min.js
+        fi
+    status:
+      - test -f "{{.HLSJS_OUT}}"
+
+  tailwind-ensure:
+    desc: "Download Tailwind standalone CLI if absent"
+    cmds:
+      - mkdir -p bin
+      - |
+        if [ ! -f "{{.TAILWIND_BIN}}" ]; then
+          echo "Downloading Tailwind {{.TAILWIND_VERSION}}..."
+          curl -sLo {{.TAILWIND_BIN}} \
+            https://github.com/tailwindlabs/tailwindcss/releases/download/{{.TAILWIND_VERSION}}/tailwindcss-linux-x64
+          chmod +x {{.TAILWIND_BIN}}
+        fi
+    status:
+      - test -f "{{.TAILWIND_BIN}}"
+
+  # ── mediamtx ────────────────────────────────────────────────────────────────
+  mediamtx:
+    desc: "Run mediamtx with project config"
+    deps: [mediamtx-ensure]
+    cmds:
+      - "{{.MEDIAMTX_BIN}} mediamtx.yml"
+
+  mediamtx-ensure:
+    desc: "Download mediamtx binary if absent"
+    cmds:
+      - mkdir -p bin
+      - |
+        if [ ! -f "{{.MEDIAMTX_BIN}}" ]; then
+          echo "Downloading mediamtx {{.MEDIAMTX_VERSION}}..."
+          TMP=$(mktemp -d)
+          curl -sL \
+            https://github.com/bluenviron/mediamtx/releases/download/{{.MEDIAMTX_VERSION}}/mediamtx_{{.MEDIAMTX_VERSION}}_linux_amd64.tar.gz \
+            | tar -xz -C "$TMP"
+          mv "$TMP/mediamtx" {{.MEDIAMTX_BIN}}
+          rm -rf "$TMP"
+        fi
+    status:
+      - test -f "{{.MEDIAMTX_BIN}}"
+
+  # ── Database ─────────────────────────────────────────────────────────────────
+  migrate-dev:
+    desc: "Apply schema.hcl to dev DB (PSQL_URL)"
+    cmds:
+      - atlas schema apply --env dev
+
+  migrate-prod:
+    desc: "Apply schema.hcl to prod DB (PSQL_PROD_URL)"
+    cmds:
+      - atlas schema apply --env prod
+
+  generate-sql-schema:
+    desc: "Inspect DB → regenerate schema.sql"
+    cmds:
+      - atlas schema inspect -u "$PSQL_URL" --format '{{ "{{" }} sql . {{ "}}" }}' > schema.sql
+
+  sqlcgen:
+    desc: "Regenerate sqlc/ from internal/sql/ + schema.sql"
+    cmds:
+      - sqlc generate
+
+  # ── Quality ──────────────────────────────────────────────────────────────────
+  test:
+    desc: "Run all tests"
+    cmds:
+      - go test ./...
+
+  fmt:
+    desc: "Format all Go code"
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: "Run go vet"
+    cmds:
+      - go vet ./...

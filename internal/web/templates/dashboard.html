@@ -1,0 +1,229 @@
+{{template "base" .}}
+
+{{define "title"}} — Dashboard{{end}}
+
+{{define "content"}}
+<div class="max-w-7xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h2 class="font-display font-bold text-2xl text-neu-fg">Live Cameras</h2>
+      <p class="text-neu-muted text-sm mt-0.5">
+        {{if .Cameras}}{{len .Cameras}} camera{{if gt (len .Cameras) 1}}s{{end}} connected{{else}}No cameras configured{{end}}
+      </p>
+    </div>
+    {{if eq .Claims.Role "admin"}}
+    <button
+      onclick="openAddCamera()"
+      class="flex items-center gap-2 px-5 py-3 rounded-2xl bg-neu-accent text-white font-display font-semibold text-sm shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add Camera
+    </button>
+    {{end}}
+  </div>
+
+  {{if not .Cameras}}
+  <!-- Empty state -->
+  <div class="flex flex-col items-center justify-center py-24">
+    <div class="w-24 h-24 rounded-[32px] bg-neu-base shadow-neu flex items-center justify-center mb-6">
+      <div class="w-14 h-14 rounded-2xl bg-neu-base shadow-neu-inset flex items-center justify-center">
+        <svg class="w-8 h-8 text-neu-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+        </svg>
+      </div>
+    </div>
+    <p class="font-display font-bold text-xl text-neu-fg">No cameras yet</p>
+    <p class="text-neu-muted text-sm mt-2">
+      {{if eq .Claims.Role "admin"}}Add your first camera to get started.{{else}}Contact your administrator.{{end}}
+    </p>
+  </div>
+  {{else}}
+  <!-- Camera grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {{range .Cameras}}
+    <div class="bg-neu-base shadow-neu rounded-[32px] p-5 hover:shadow-neu-hover hover:-translate-y-0.5 transition-all duration-300">
+
+      <!-- Video well — deep inset "carved screen" -->
+      <div class="relative aspect-video bg-[#1a1f26] shadow-neu-inset-deep rounded-2xl overflow-hidden mb-4">
+        <video
+          id="player-{{.ID}}"
+          class="w-full h-full object-contain"
+          controls muted playsinline
+          data-hls="{{$.HLSBase}}/{{.Name}}/index.m3u8"
+        ></video>
+
+        <!-- Stream overlay -->
+        <div id="overlay-{{.ID}}" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1a1f26]/80 backdrop-blur-[2px]">
+          <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white/50" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 9.75v9A2.25 2.25 0 004.5 18.75z"/>
+            </svg>
+          </div>
+          <button
+            onclick="startStream({{.ID}})"
+            class="px-4 py-2 rounded-xl bg-neu-base shadow-neu-sm text-neu-accent font-semibold text-sm hover:shadow-neu hover:-translate-y-px active:translate-y-px active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent"
+          >
+            Watch Live
+          </button>
+        </div>
+
+        <!-- Status badges -->
+        {{if not .Enabled}}
+        <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium">
+          disabled
+        </div>
+        {{end}}
+        {{if .Codec.Valid}}{{if eq .Codec.String "h265"}}
+        <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-amber-50 shadow-neu-sm text-amber-700 text-xs font-medium">
+          H.265 ⚠
+        </div>
+        {{end}}{{end}}
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between px-1">
+        <span class="font-semibold text-neu-fg truncate text-sm">{{.Name}}</span>
+        {{if eq $.Claims.Role "admin"}}
+        <div class="flex gap-1 flex-shrink-0 ml-2">
+          <button
+            onclick="editCamera({{.ID}}, '{{.Name}}', '{{.RtspUrl}}', {{.Enabled}})"
+            class="px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium hover:text-neu-accent hover:-translate-y-px hover:shadow-neu transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
+            Edit
+          </button>
+          <button
+            onclick="deleteCamera({{.ID}})"
+            class="px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium hover:text-red-500 hover:-translate-y-px hover:shadow-neu transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-400">
+            Del
+          </button>
+        </div>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
+</div>
+
+<!-- Add/Edit Camera Modal -->
+<div id="camera-modal" class="hidden fixed inset-0 bg-neu-fg/10 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-neu-base shadow-neu-modal rounded-[32px] p-8 w-full max-w-md">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-neu-base shadow-neu-inset flex items-center justify-center">
+        <svg class="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 9.75v9A2.25 2.25 0 004.5 18.75z"/>
+        </svg>
+      </div>
+      <h3 id="camera-modal-title" class="font-display font-bold text-lg text-neu-fg">Add Camera</h3>
+    </div>
+    <form id="camera-form" class="space-y-5">
+      <input type="hidden" id="camera-id"/>
+      <div>
+        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Name (slug)</label>
+        <input id="camera-name" type="text" placeholder="front-door"
+          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg placeholder:text-neu-muted focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
+        <p class="text-xs text-neu-muted mt-1.5 pl-1">Lowercase letters, numbers, dashes.</p>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">RTSP URL</label>
+        <input id="camera-rtsp" type="text" placeholder="rtsp://user:pass@192.168.1.10:554/stream"
+          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg placeholder:text-neu-muted focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
+      </div>
+      <div class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neu-inset-sm">
+        <input id="camera-enabled" type="checkbox" checked class="w-4 h-4 rounded accent-neu-accent"/>
+        <label class="text-sm font-medium text-neu-fg">Enabled</label>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit"
+          class="flex-1 py-3 rounded-2xl bg-neu-accent text-white font-semibold shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
+          Save
+        </button>
+        <button type="button" onclick="closeCameraModal()"
+          class="flex-1 py-3 rounded-2xl bg-neu-base shadow-neu-sm text-neu-muted font-medium hover:text-neu-fg hover:-translate-y-px hover:shadow-neu active:translate-y-px active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
+          Cancel
+        </button>
+      </div>
+    </form>
+    <p id="camera-error" class="hidden mt-3 px-4 py-2 rounded-xl shadow-neu-inset-sm text-red-500 text-sm text-center"></p>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/hls.min.js"></script>
+<script>
+// ── HLS live stream ──────────────────────────────────────────────────────────
+function startStream(id) {
+  const video = document.getElementById('player-' + id);
+  const src = video.dataset.hls;
+  if (Hls.isSupported()) {
+    const hls = new Hls({ lowLatencyMode: false });
+    hls.loadSource(src);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = src;
+    video.play().catch(() => {});
+  }
+  const overlay = document.getElementById('overlay-' + id);
+  if (overlay) overlay.classList.add('hidden');
+}
+
+// ── Camera CRUD ──────────────────────────────────────────────────────────────
+function openAddCamera() {
+  document.getElementById('camera-modal-title').textContent = 'Add Camera';
+  document.getElementById('camera-id').value = '';
+  document.getElementById('camera-name').value = '';
+  document.getElementById('camera-rtsp').value = '';
+  document.getElementById('camera-enabled').checked = true;
+  document.getElementById('camera-error').classList.add('hidden');
+  document.getElementById('camera-modal').classList.remove('hidden');
+}
+
+function editCamera(id, name, rtsp, enabled) {
+  document.getElementById('camera-modal-title').textContent = 'Edit Camera';
+  document.getElementById('camera-id').value = id;
+  document.getElementById('camera-name').value = name;
+  document.getElementById('camera-rtsp').value = rtsp;
+  document.getElementById('camera-enabled').checked = enabled;
+  document.getElementById('camera-error').classList.add('hidden');
+  document.getElementById('camera-modal').classList.remove('hidden');
+}
+
+function closeCameraModal() {
+  document.getElementById('camera-modal').classList.add('hidden');
+}
+
+document.getElementById('camera-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('camera-id').value;
+  const body = {
+    name: document.getElementById('camera-name').value,
+    rtsp_url: document.getElementById('camera-rtsp').value,
+    enabled: document.getElementById('camera-enabled').checked,
+  };
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? '/api/cameras/' + id : '/api/cameras';
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const j = await res.json();
+    const el = document.getElementById('camera-error');
+    el.textContent = j.error || 'Request failed';
+    el.classList.remove('hidden');
+    return;
+  }
+  location.reload();
+});
+
+async function deleteCamera(id) {
+  if (!confirm('Delete this camera and its recordings index?')) return;
+  const res = await fetch('/api/cameras/' + id, { method: 'DELETE' });
+  if (res.ok) location.reload();
+}
+</script>
+{{end}}

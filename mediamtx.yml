@@ -1,0 +1,25 @@
+# mediamtx base config for GoldenEye
+# All ports bound to loopback — only GoldenEye is exposed publicly.
+
+api: yes
+apiAddress: 127.0.0.1:9997
+
+rtsp: yes
+rtspAddress: 127.0.0.1:8554
+
+rtmp: no
+
+hls: yes
+hlsAddress: 127.0.0.1:8888
+hlsAllowOrigin: "*"
+hlsMuxerCloseAfter: 60s
+
+webrtc: no
+srt: no
+
+logLevel: info
+logDestinations: [stdout]
+
+# Paths are managed dynamically by GoldenEye via the mediamtx HTTP API.
+# Do not add static paths here.
+paths: {}

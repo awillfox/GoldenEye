@@ -1,0 +1,4 @@
+{
+  "retention_days": 30,
+  "segment_minutes": 10
+}

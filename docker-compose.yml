@@ -1,0 +1,13 @@
+services:
+  # mediamtx media gateway — optional service wrapper.
+  # GoldenEye assumes mediamtx is already running (local binary or this service).
+  # Postgres is external (use PSQL_URL in .env).
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    restart: unless-stopped
+    network_mode: host  # required: GoldenEye talks to 127.0.0.1:9997/8888/8554
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+      - ${RECORDINGS_DIR:-./recordings}:/recordings
+    environment:
+      - MTX_LOGLEVEL=info
