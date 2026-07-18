@@ -28,12 +28,18 @@ func New(baseURL string) *Client {
 
 // PathConfig is the payload sent to add/update a path.
 type PathConfig struct {
-	Source                string `json:"source"`
+	Source                string `json:"source,omitempty"`
 	SourceOnDemand        bool   `json:"sourceOnDemand"`
 	Record                bool   `json:"record"`
 	RecordFormat          string `json:"recordFormat,omitempty"`
 	RecordPath            string `json:"recordPath,omitempty"`
 	RecordSegmentDuration string `json:"recordSegmentDuration,omitempty"`
+	// runOnDemand: a command started when a reader connects (used for the
+	// on-demand transcoded preview path). When set, Source is left empty so the
+	// path acts as a publisher target for the command's output.
+	RunOnDemand           string `json:"runOnDemand,omitempty"`
+	RunOnDemandRestart    bool   `json:"runOnDemandRestart,omitempty"`
+	RunOnDemandCloseAfter string `json:"runOnDemandCloseAfter,omitempty"`
 }
 
 // PathListItem is one entry in the paths list response.

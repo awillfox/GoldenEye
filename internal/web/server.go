@@ -30,13 +30,14 @@ var embedFS embed.FS
 
 // Server holds all handler dependencies.
 type Server struct {
-	db       *pgxpool.Pool
-	q        *sqlc.Queries
-	authSvc  *auth.Service
-	camSvc   *camera.Service
-	settings *config.Manager
-	env      *config.Env
-	hlsProxy *httputil.ReverseProxy
+	db          *pgxpool.Pool
+	q           *sqlc.Queries
+	authSvc     *auth.Service
+	camSvc      *camera.Service
+	settings    *config.Manager
+	env         *config.Env
+	hlsProxy    *httputil.ReverseProxy
+	webrtcProxy *httputil.ReverseProxy
 }
 
 // New creates the Server and validates template parsing on startup.
@@ -59,14 +60,32 @@ func New(
 		return nil, err
 	}
 
+	webrtcTarget, err := url.Parse(env.MediamtxWebRTC)
+	if err != nil {
+		return nil, err
+	}
+	webrtcProxy := httputil.NewSingleHostReverseProxy(webrtcTarget)
+	// mediamtx's WHEP responses carry a Location header pointing at the session
+	// resource (for teardown). Rewrite it back under our /webrtc proxy prefix so
+	// the browser's DELETE stays same-origin and auth-gated.
+	webrtcProxy.ModifyResponse = func(resp *http.Response) error {
+		if loc := resp.Header.Get("Location"); loc != "" {
+			if u, perr := url.Parse(loc); perr == nil && strings.HasPrefix(u.Path, "/") {
+				resp.Header.Set("Location", "/webrtc"+u.Path)
+			}
+		}
+		return nil
+	}
+
 	return &Server{
-		db:       db,
-		q:        sqlc.New(db),
-		authSvc:  authSvc,
-		camSvc:   camSvc,
-		settings: settings,
-		env:      env,
-		hlsProxy: httputil.NewSingleHostReverseProxy(hlsTarget),
+		db:          db,
+		q:           sqlc.New(db),
+		authSvc:     authSvc,
+		camSvc:      camSvc,
+		settings:    settings,
+		env:         env,
+		hlsProxy:    httputil.NewSingleHostReverseProxy(hlsTarget),
+		webrtcProxy: webrtcProxy,
 	}, nil
 }
 
@@ -115,6 +134,10 @@ func (s *Server) Router() *chi.Mux {
 		// Auth-gated HLS proxy → mediamtx HLS.
 		r.HandleFunc("/hls/{name}/*", s.hlsProxyHandler)
 
+		// Auth-gated WebRTC (WHEP) proxy → mediamtx WebRTC. Used for the live
+		// preview so camera G711 audio (unsupported by HLS) is delivered.
+		r.HandleFunc("/webrtc/*", s.webrtcProxyHandler)
+
 		// VOD: serve recording files with Range support.
 		r.Get("/vod/{id}", s.vodHandler)
 
@@ -157,6 +180,18 @@ func (s *Server) hlsProxyHandler(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = "/" + name + "/" + rest
 	r.URL.RawPath = ""
 	s.hlsProxy.ServeHTTP(w, r)
+}
+
+// ── WebRTC (WHEP) Proxy ────────────────────────────────────────────────────────
+
+// webrtcProxyHandler forwards WHEP signaling (POST offer / DELETE session) to
+// mediamtx, stripping the /webrtc prefix. Media itself flows peer-to-peer over
+// UDP and does not pass through this proxy.
+func (s *Server) webrtcProxyHandler(w http.ResponseWriter, r *http.Request) {
+	rest := chi.URLParam(r, "*")
+	r.URL.Path = "/" + rest
+	r.URL.RawPath = ""
+	s.webrtcProxy.ServeHTTP(w, r)
 }
 
 // ── VOD ──────────────────────────────────────────────────────────────────────
@@ -246,9 +281,10 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, "dashboard.html", map[string]interface{}{
-		"Claims":  auth.ClaimsFromCtx(r.Context()),
-		"Cameras": cameras,
-		"HLSBase": "/hls",
+		"Claims":     auth.ClaimsFromCtx(r.Context()),
+		"Cameras":    cameras,
+		"HLSBase":    "/hls",
+		"WebRTCBase": "/webrtc",
 	})
 }
 
@@ -445,13 +481,13 @@ func (s *Server) apiUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // recordingJSON is the clean API representation of a recording.
 type recordingJSON struct {
-	ID            int64   `json:"id"`
-	CameraID      int64   `json:"camera_id"`
-	StartedAt     string  `json:"started_at"`
-	DurationSecs  int     `json:"duration_secs"`
-	SizeBytes     int64   `json:"size_bytes"`
-	HasThumbnail  bool    `json:"has_thumbnail"`
-	ThumbnailURL  string  `json:"thumbnail_url,omitempty"`
+	ID           int64  `json:"id"`
+	CameraID     int64  `json:"camera_id"`
+	StartedAt    string `json:"started_at"`
+	DurationSecs int    `json:"duration_secs"`
+	SizeBytes    int64  `json:"size_bytes"`
+	HasThumbnail bool   `json:"has_thumbnail"`
+	ThumbnailURL string `json:"thumbnail_url,omitempty"`
 }
 
 // Recordings API

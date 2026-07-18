@@ -114,6 +114,31 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 ```
 
+## Live preview & audio
+
+The live preview uses **WebRTC (WHEP)**, proxied (auth-gated) through GoldenEye at
+`/webrtc/<path>/whep`. WebRTC is used instead of HLS because it carries the cameras' **G711
+(`pcm_alaw`) audio**, which the HLS muxer drops.
+
+Each enabled camera gets two mediamtx paths:
+
+| Path | Purpose | Cost |
+|------|---------|------|
+| `<name>` | Native stream, 24/7 recording | Codec copied — no transcode |
+| `<name>-preview` | Browser preview (WebRTC) | On-demand H264 transcode |
+
+The preview path runs `ffmpeg` **only while someone is watching** (`runOnDemand`, stops 10s
+after the last viewer). It transcodes video to **H264** — browsers can't decode H265 over
+WebRTC — while **copying the G711 audio** through untouched. Recording is unaffected and keeps
+the camera's native codec.
+
+The transcode defaults to software `libx264 -preset ultrafast`. If CPU is a concern and the
+host has a GPU, switch the encoder in `buildPreviewPathConfig` (`internal/camera/service.go`)
+to a hardware encoder, e.g. `-c:v h264_nvenc` (NVIDIA) or `-c:v h264_vaapi` (Intel/AMD).
+
+WebRTC media flows over **UDP :8189** directly from the browser to the host (see
+`webrtcLocalUDPAddress` in `mediamtx.yml`); that port must be reachable on the LAN/VPN.
+
 ## Development
 
 ```bash

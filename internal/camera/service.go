@@ -53,17 +53,18 @@ func (s *Service) Reconcile(ctx context.Context) error {
 		existingMap[p.Name] = struct{}{}
 	}
 
-	wantMap := make(map[string]struct{}, len(cameras))
+	wantMap := make(map[string]struct{}, len(cameras)*2)
 	for _, cam := range cameras {
-		wantMap[cam.Name] = struct{}{}
-		cfg := s.buildPathConfig(cam)
-		if _, ok := existingMap[cam.Name]; ok {
-			if err = s.mtx.UpdatePath(ctx, cam.Name, cfg); err != nil {
-				slog.Warn("update mediamtx path", "camera", cam.Name, "err", err)
-			}
-		} else {
-			if err = s.mtx.AddPath(ctx, cam.Name, cfg); err != nil {
-				slog.Warn("add mediamtx path", "camera", cam.Name, "err", err)
+		for name, cfg := range s.desiredPaths(cam) {
+			wantMap[name] = struct{}{}
+			if _, ok := existingMap[name]; ok {
+				if err = s.mtx.UpdatePath(ctx, name, cfg); err != nil {
+					slog.Warn("update mediamtx path", "path", name, "err", err)
+				}
+			} else {
+				if err = s.mtx.AddPath(ctx, name, cfg); err != nil {
+					slog.Warn("add mediamtx path", "path", name, "err", err)
+				}
 			}
 		}
 	}
@@ -95,9 +96,11 @@ func (s *Service) Create(ctx context.Context, name, rtspURL string) (*sqlc.Camer
 		return nil, fmt.Errorf("create camera: %w", err)
 	}
 
-	if err = s.mtx.AddPath(ctx, name, s.buildPathConfig(cam)); err != nil {
-		// Log but don't fail — reconcile on next startup will fix it.
-		slog.Warn("add mediamtx path after create", "camera", name, "err", err)
+	for pathName, cfg := range s.desiredPaths(cam) {
+		if err = s.mtx.AddPath(ctx, pathName, cfg); err != nil {
+			// Log but don't fail — reconcile on next startup will fix it.
+			slog.Warn("add mediamtx path after create", "path", pathName, "err", err)
+		}
 	}
 
 	return &cam, nil
@@ -125,27 +128,32 @@ func (s *Service) Update(ctx context.Context, id int64, name, rtspURL string, en
 		return nil, fmt.Errorf("update camera: %w", err)
 	}
 
-	// If name changed, delete old path and add new one.
+	// If name changed, delete the old paths (main + preview).
 	if old.Name != name {
-		if err = s.mtx.DeletePath(ctx, old.Name); err != nil {
-			slog.Warn("delete old mediamtx path on rename", "old", old.Name, "err", err)
+		for _, pathName := range pathNamesFor(old.Name) {
+			if err = s.mtx.DeletePath(ctx, pathName); err != nil {
+				slog.Warn("delete old mediamtx path on rename", "path", pathName, "err", err)
+			}
 		}
 	}
 
 	if enabled {
-		cfg := s.buildPathConfig(cam)
-		if old.Name != name {
-			if err = s.mtx.AddPath(ctx, name, cfg); err != nil {
-				slog.Warn("add mediamtx path after update", "camera", name, "err", err)
-			}
-		} else {
-			if err = s.mtx.UpdatePath(ctx, name, cfg); err != nil {
-				slog.Warn("update mediamtx path", "camera", name, "err", err)
+		for pathName, cfg := range s.desiredPaths(cam) {
+			if old.Name != name {
+				if err = s.mtx.AddPath(ctx, pathName, cfg); err != nil {
+					slog.Warn("add mediamtx path after update", "path", pathName, "err", err)
+				}
+			} else {
+				if err = s.mtx.UpdatePath(ctx, pathName, cfg); err != nil {
+					slog.Warn("update mediamtx path", "path", pathName, "err", err)
+				}
 			}
 		}
 	} else {
-		if err = s.mtx.DeletePath(ctx, name); err != nil {
-			slog.Warn("delete mediamtx path on disable", "camera", name, "err", err)
+		for _, pathName := range pathNamesFor(name) {
+			if err = s.mtx.DeletePath(ctx, pathName); err != nil {
+				slog.Warn("delete mediamtx path on disable", "path", pathName, "err", err)
+			}
 		}
 	}
 
@@ -163,14 +171,39 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 		return fmt.Errorf("delete camera %d: %w", id, err)
 	}
 
-	if err = s.mtx.DeletePath(ctx, cam.Name); err != nil {
-		slog.Warn("delete mediamtx path on camera delete", "camera", cam.Name, "err", err)
+	for _, pathName := range pathNamesFor(cam.Name) {
+		if err = s.mtx.DeletePath(ctx, pathName); err != nil {
+			slog.Warn("delete mediamtx path on camera delete", "path", pathName, "err", err)
+		}
 	}
 
 	return nil
 }
 
-// buildPathConfig constructs the mediamtx PathConfig for a camera row.
+// previewPathName is the mediamtx path serving the browser-friendly (H264)
+// transcode of a camera for the WebRTC live preview.
+func previewPathName(name string) string { return name + "-preview" }
+
+// pathNamesFor returns every mediamtx path owned by a camera (recording + preview).
+func pathNamesFor(name string) []string {
+	return []string{name, previewPathName(name)}
+}
+
+// desiredPaths returns the full set of mediamtx paths a camera should have:
+//   - <name>          native source, 24/7 recording (codec copied, no CPU cost)
+//   - <name>-preview  on-demand H264 transcode for browser WebRTC preview
+func (s *Service) desiredPaths(cam sqlc.Camera) map[string]mediamtx.PathConfig {
+	paths := map[string]mediamtx.PathConfig{
+		cam.Name: s.buildPathConfig(cam),
+	}
+	if cam.Enabled {
+		paths[previewPathName(cam.Name)] = s.buildPreviewPathConfig(cam)
+	}
+	return paths
+}
+
+// buildPathConfig constructs the mediamtx PathConfig for a camera's native
+// recording path.
 func (s *Service) buildPathConfig(cam sqlc.Camera) mediamtx.PathConfig {
 	st := s.settings.Get()
 	segDur := fmt.Sprintf("%dm", st.SegmentMinutes)
@@ -183,5 +216,29 @@ func (s *Service) buildPathConfig(cam sqlc.Camera) mediamtx.PathConfig {
 		RecordFormat:          "fmp4",
 		RecordPath:            recordPath,
 		RecordSegmentDuration: segDur,
+	}
+}
+
+// buildPreviewPathConfig constructs the on-demand transcode path used for the
+// WebRTC live preview. It transcodes video to H264 (browsers can't decode H265
+// over WebRTC) while copying the G711 audio through untouched (WebRTC carries it
+// natively). ffmpeg only runs while a viewer is connected, so there is no
+// steady-state CPU cost; recording still uses the untouched native stream.
+func (s *Service) buildPreviewPathConfig(cam sqlc.Camera) mediamtx.PathConfig {
+	// $RTSP_PORT and $MTX_PATH are expanded by mediamtx; cam.Name is a validated
+	// slug. Input is mediamtx's own already-connected native path, so the camera
+	// is not opened a second time.
+	ffmpeg := fmt.Sprintf(
+		"ffmpeg -nostdin -loglevel warning -rtsp_transport tcp "+
+			"-i rtsp://127.0.0.1:$RTSP_PORT/%s "+
+			"-c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -pix_fmt yuv420p -g 30 "+
+			"-c:a copy "+
+			"-f rtsp rtsp://127.0.0.1:$RTSP_PORT/$MTX_PATH",
+		cam.Name,
+	)
+	return mediamtx.PathConfig{
+		RunOnDemand:           ffmpeg,
+		RunOnDemandRestart:    true,
+		RunOnDemandCloseAfter: "10s",
 	}
 }

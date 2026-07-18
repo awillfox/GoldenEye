@@ -14,7 +14,14 @@ hlsAddress: 127.0.0.1:8888
 hlsAllowOrigin: "*"
 hlsMuxerCloseAfter: 60s
 
-webrtc: no
+# WebRTC is used for the live preview: it passes the cameras' G711 (pcm_alaw)
+# audio through natively, which the HLS muxer cannot do. Signaling (WHEP, HTTP)
+# is proxied through GoldenEye on loopback; media flows over UDP directly from
+# the browser to this host, so the UDP port must be reachable on the LAN.
+webrtc: yes
+webrtcAddress: 127.0.0.1:8889
+webrtcLocalUDPAddress: :8189
+webrtcIPsFromInterfaces: yes
 srt: no
 
 logLevel: info

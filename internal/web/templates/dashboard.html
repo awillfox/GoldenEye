@@ -53,8 +53,8 @@
         <video
           id="player-{{.ID}}"
           class="w-full h-full object-contain"
-          controls muted playsinline
-          data-hls="{{$.HLSBase}}/{{.Name}}/index.m3u8"
+          controls playsinline
+          data-whep="{{$.WebRTCBase}}/{{.Name}}-preview/whep"
         ></video>
 
         <!-- Stream overlay -->
@@ -155,24 +155,103 @@
 {{end}}
 
 {{define "scripts"}}
-<script src="/static/hls.min.js"></script>
 <script>
-// ── HLS live stream ──────────────────────────────────────────────────────────
-function startStream(id) {
+// ── WebRTC (WHEP) live stream ─────────────────────────────────────────────────
+// WebRTC carries the cameras' G711 audio, which HLS cannot. Playback is kicked
+// off from the "Watch Live" click (a user gesture), so audio is allowed to play.
+const sessions = {}; // id -> { pc, location }
+
+async function startStream(id) {
   const video = document.getElementById('player-' + id);
-  const src = video.dataset.hls;
-  if (Hls.isSupported()) {
-    const hls = new Hls({ lowLatencyMode: false });
-    hls.loadSource(src);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = src;
-    video.play().catch(() => {});
-  }
   const overlay = document.getElementById('overlay-' + id);
+  if (sessions[id]) return; // already running
+
+  const pc = new RTCPeerConnection();
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+
+  const stream = new MediaStream();
+  pc.ontrack = (e) => {
+    stream.addTrack(e.track);
+    video.srcObject = stream;
+  };
+  pc.addEventListener('connectionstatechange', () => {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') stopStream(id);
+  });
+
+  const entry = { pc, location: null };
+  sessions[id] = entry;
+
+  try {
+    await pc.setLocalDescription(await pc.createOffer());
+    await waitIceGathering(pc);
+
+    const res = await fetch(video.dataset.whep, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/sdp' },
+      body: pc.localDescription.sdp,
+    });
+    if (!res.ok) throw new Error('WHEP ' + res.status);
+
+    entry.location = res.headers.get('Location');
+    await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
+  } catch (err) {
+    console.error('live stream failed', err);
+    stopStream(id);
+    return;
+  }
+
   if (overlay) overlay.classList.add('hidden');
+
+  // We're inside the click gesture, so try to play with sound first.
+  video.muted = false;
+  video.play().catch(() => {
+    // Browser refused audible autoplay — fall back to muted + an unmute button.
+    video.muted = true;
+    video.play().catch(() => {});
+    showUnmute(id);
+  });
 }
+
+function stopStream(id) {
+  const entry = sessions[id];
+  if (!entry) return;
+  delete sessions[id];
+  try { entry.pc.close(); } catch (_) {}
+  if (entry.location) {
+    // Best-effort session teardown on mediamtx.
+    fetch(entry.location, { method: 'DELETE', keepalive: true }).catch(() => {});
+  }
+}
+
+// Non-trickle ICE: resolve once gathering completes (host candidates on a LAN
+// are immediate), with a safety timeout for browsers that stall.
+function waitIceGathering(pc) {
+  return new Promise((resolve) => {
+    if (pc.iceGatheringState === 'complete') return resolve();
+    const done = () => {
+      if (pc.iceGatheringState === 'complete') {
+        pc.removeEventListener('icegatheringstatechange', done);
+        resolve();
+      }
+    };
+    pc.addEventListener('icegatheringstatechange', done);
+    setTimeout(resolve, 2000);
+  });
+}
+
+function showUnmute(id) {
+  const video = document.getElementById('player-' + id);
+  const wrap = video.parentElement;
+  if (wrap.querySelector('.unmute-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'unmute-btn absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-accent text-xs font-semibold z-10';
+  btn.textContent = '🔊 Unmute';
+  btn.onclick = () => { video.muted = false; video.play().catch(() => {}); btn.remove(); };
+  wrap.appendChild(btn);
+}
+
+window.addEventListener('pagehide', () => Object.keys(sessions).forEach(stopStream));
 
 // ── Camera CRUD ──────────────────────────────────────────────────────────────
 function openAddCamera() {

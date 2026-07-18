@@ -11,15 +11,16 @@ import (
 // Env holds values loaded from .env / environment variables.
 // These are infrastructure/secret values set at deploy time and never written back.
 type Env struct {
-	Port          int    `mapstructure:"PORT"`
-	PSQLURL       string `mapstructure:"PSQL_URL"`
-	MasterKey     string `mapstructure:"MASTER_KEY"`
-	AdminUser     string `mapstructure:"ADMIN_USER"`
-	AdminPass     string `mapstructure:"ADMIN_PASS"`
-	RecordingsDir string `mapstructure:"RECORDINGS_DIR"`
-	MediamtxAPI   string `mapstructure:"MEDIAMTX_API"`
-	MediamtxHLS   string `mapstructure:"MEDIAMTX_HLS"`
-	MediamtxRTSP  string `mapstructure:"MEDIAMTX_RTSP"`
+	Port           int    `mapstructure:"PORT"`
+	PSQLURL        string `mapstructure:"PSQL_URL"`
+	MasterKey      string `mapstructure:"MASTER_KEY"`
+	AdminUser      string `mapstructure:"ADMIN_USER"`
+	AdminPass      string `mapstructure:"ADMIN_PASS"`
+	RecordingsDir  string `mapstructure:"RECORDINGS_DIR"`
+	MediamtxAPI    string `mapstructure:"MEDIAMTX_API"`
+	MediamtxHLS    string `mapstructure:"MEDIAMTX_HLS"`
+	MediamtxWebRTC string `mapstructure:"MEDIAMTX_WEBRTC"`
+	MediamtxRTSP   string `mapstructure:"MEDIAMTX_RTSP"`
 }
 
 // LoadEnv loads config from .env file (if present) then environment variables.
@@ -40,6 +41,7 @@ func LoadEnv() (*Env, error) {
 	v.SetDefault("RECORDINGS_DIR", "./recordings")
 	v.SetDefault("MEDIAMTX_API", "http://127.0.0.1:9997")
 	v.SetDefault("MEDIAMTX_HLS", "http://127.0.0.1:8888")
+	v.SetDefault("MEDIAMTX_WEBRTC", "http://127.0.0.1:8889")
 	v.SetDefault("MEDIAMTX_RTSP", "rtsp://127.0.0.1:8554")
 
 	var env Env
