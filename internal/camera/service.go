@@ -15,6 +15,12 @@ import (
 
 var validName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
 
+// Syncer is implemented by the recorder supervisor. It is an interface so the
+// camera package does not import recorder, which imports config and sqlc.
+type Syncer interface {
+	Sync(ctx context.Context, cams []sqlc.Camera)
+}
+
 // Service manages cameras in the database and keeps mediamtx in sync.
 type Service struct {
 	db       *pgxpool.Pool
@@ -22,17 +28,33 @@ type Service struct {
 	mtx      *mediamtx.Client
 	settings *config.Manager
 	env      *config.Env
+	rec      Syncer
 }
 
-// New creates a camera Service.
-func New(db *pgxpool.Pool, mtx *mediamtx.Client, settings *config.Manager, env *config.Env) *Service {
+// New creates a camera Service. rec may be nil (useful in tests); when set, it
+// is resynced after every change so recording follows camera CRUD immediately.
+func New(db *pgxpool.Pool, mtx *mediamtx.Client, settings *config.Manager, env *config.Env, rec Syncer) *Service {
 	return &Service{
 		db:       db,
 		q:        sqlc.New(db),
 		mtx:      mtx,
 		settings: settings,
 		env:      env,
+		rec:      rec,
 	}
+}
+
+// SyncRecorders reloads the camera list and hands it to the recorder supervisor.
+func (s *Service) SyncRecorders(ctx context.Context) {
+	if s.rec == nil {
+		return
+	}
+	cams, err := s.q.ListCameras(ctx)
+	if err != nil {
+		slog.Error("sync recorders: list cameras", "err", err)
+		return
+	}
+	s.rec.Sync(ctx, cams)
 }
 
 // Reconcile syncs mediamtx paths with the enabled cameras in the DB.
@@ -78,6 +100,7 @@ func (s *Service) Reconcile(ctx context.Context) error {
 		}
 	}
 
+	s.SyncRecorders(ctx)
 	return nil
 }
 
@@ -103,6 +126,7 @@ func (s *Service) Create(ctx context.Context, name, rtspURL string) (*sqlc.Camer
 		}
 	}
 
+	s.SyncRecorders(ctx)
 	return &cam, nil
 }
 
@@ -157,6 +181,7 @@ func (s *Service) Update(ctx context.Context, id int64, name, rtspURL string, en
 		}
 	}
 
+	s.SyncRecorders(ctx)
 	return &cam, nil
 }
 
@@ -177,6 +202,7 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 		}
 	}
 
+	s.SyncRecorders(ctx)
 	return nil
 }
 
@@ -203,19 +229,15 @@ func (s *Service) desiredPaths(cam sqlc.Camera) map[string]mediamtx.PathConfig {
 }
 
 // buildPathConfig constructs the mediamtx PathConfig for a camera's native
-// recording path.
+// source path. mediamtx no longer records: its recorder writes G711 audio as
+// raw LPCM ('ipcm'), which no browser can decode, and it cannot align segment
+// boundaries to the wall clock. Recording is done by the ffmpeg processes in
+// internal/recorder, which read this path.
 func (s *Service) buildPathConfig(cam sqlc.Camera) mediamtx.PathConfig {
-	st := s.settings.Get()
-	segDur := fmt.Sprintf("%dm", st.SegmentMinutes)
-	recordPath := fmt.Sprintf("%s/%s/%%Y-%%m-%%d_%%H-%%M-%%S-%%f", s.env.RecordingsDir, cam.Name)
-
 	return mediamtx.PathConfig{
-		Source:                cam.RtspUrl,
-		SourceOnDemand:        false, // always connected (24/7 recording)
-		Record:                cam.Enabled,
-		RecordFormat:          "fmp4",
-		RecordPath:            recordPath,
-		RecordSegmentDuration: segDur,
+		Source:         cam.RtspUrl,
+		SourceOnDemand: false, // always connected — the recorder reads this path 24/7
+		Record:         false,
 	}
 }
 

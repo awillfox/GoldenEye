@@ -43,9 +43,9 @@ CREATE TABLE "public"."recordings" (
   "started_at" timestamptz NOT NULL,
   "ended_at" timestamptz NULL,
   "size_bytes" bigint NULL,
-  "created_at" timestamptz NOT NULL DEFAULT now(),
   "thumbnail_path" text NULL,
   "duration_secs" integer NULL,
+  "created_at" timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY ("id"),
   CONSTRAINT "recordings_camera_id_fkey" FOREIGN KEY ("camera_id") REFERENCES "public"."cameras" ("id") ON UPDATE NO ACTION ON DELETE CASCADE
 );

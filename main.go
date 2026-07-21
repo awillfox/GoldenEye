@@ -17,6 +17,7 @@ import (
 	"golden_eye/internal/db"
 	"golden_eye/internal/index"
 	"golden_eye/internal/mediamtx"
+	"golden_eye/internal/recorder"
 	"golden_eye/internal/rotation"
 	"golden_eye/internal/web"
 	"golden_eye/sqlc"
@@ -71,8 +72,14 @@ func run() error {
 		slog.Info("mediamtx connected", "api", env.MediamtxAPI)
 	}
 
-	// ── Camera service + reconcile ────────────────────────────────────────────
-	camSvc := camera.New(pool, mtxClient, settings, env)
+	// ── Recorder supervisor + camera service ──────────────────────────────────
+	rec := recorder.New(recorder.Config{
+		RecordingsDir: env.RecordingsDir,
+		RTSPBase:      env.MediamtxRTSP,
+	}, settings)
+	defer rec.Stop()
+
+	camSvc := camera.New(pool, mtxClient, settings, env, rec)
 	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if rErr := camSvc.Reconcile(reconcileCtx); rErr != nil {
 		slog.Warn("startup reconcile incomplete", "err", rErr)
@@ -117,6 +124,7 @@ func run() error {
 	<-sigCh
 	slog.Info("shutting down...")
 	workerStop()
+	rec.Stop()
 
 	shutCtx, shutCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer shutCancel()

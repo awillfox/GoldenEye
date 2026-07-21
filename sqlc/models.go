@@ -30,9 +30,9 @@ type Recording struct {
 	StartedAt     pgtype.Timestamptz `db:"started_at" json:"started_at"`
 	EndedAt       pgtype.Timestamptz `db:"ended_at" json:"ended_at"`
 	SizeBytes     pgtype.Int8        `db:"size_bytes" json:"size_bytes"`
-	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	ThumbnailPath pgtype.Text        `db:"thumbnail_path" json:"thumbnail_path"`
 	DurationSecs  pgtype.Int4        `db:"duration_secs" json:"duration_secs"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
 
 type User struct {
