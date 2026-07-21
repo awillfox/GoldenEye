@@ -90,7 +90,7 @@ func run() error {
 	workerCtx, workerStop := context.WithCancel(context.Background())
 	defer workerStop()
 
-	indexer := index.New(pool, env.RecordingsDir, 2*time.Minute)
+	indexer := index.New(pool, env.RecordingsDir, 2*time.Minute, settings)
 	go indexer.Run(workerCtx)
 
 	sweeper := rotation.New(pool, settings)

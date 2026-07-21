@@ -92,6 +92,46 @@ func (q *Queries) GetRecording(ctx context.Context, id int64) (Recording, error)
 	return i, err
 }
 
+const listCameraRecordingHealth = `-- name: ListCameraRecordingHealth :many
+SELECT c.id, c.name, c.enabled, MAX(r.started_at)::timestamptz AS last_started_at
+FROM cameras c
+LEFT JOIN recordings r ON r.camera_id = c.id
+GROUP BY c.id, c.name, c.enabled
+ORDER BY c.name
+`
+
+type ListCameraRecordingHealthRow struct {
+	ID            int64              `db:"id" json:"id"`
+	Name          string             `db:"name" json:"name"`
+	Enabled       bool               `db:"enabled" json:"enabled"`
+	LastStartedAt pgtype.Timestamptz `db:"last_started_at" json:"last_started_at"`
+}
+
+func (q *Queries) ListCameraRecordingHealth(ctx context.Context) ([]ListCameraRecordingHealthRow, error) {
+	rows, err := q.db.Query(ctx, listCameraRecordingHealth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCameraRecordingHealthRow{}
+	for rows.Next() {
+		var i ListCameraRecordingHealthRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Enabled,
+			&i.LastStartedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRecordings = `-- name: ListRecordings :many
 SELECT id, camera_id, path, started_at, ended_at, size_bytes, thumbnail_path, duration_secs, created_at FROM recordings
 WHERE ($1::bigint IS NULL OR camera_id = $1::bigint)

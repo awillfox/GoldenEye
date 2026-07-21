@@ -78,6 +78,11 @@
           disabled
         </div>
         {{end}}
+        {{if index $.Stale .ID}}
+        <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-red-50 shadow-neu-sm text-red-600 text-xs font-medium">
+          not recording
+        </div>
+        {{end}}
         {{if .Codec.Valid}}{{if eq .Codec.String "h265"}}
         <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-amber-50 shadow-neu-sm text-amber-700 text-xs font-medium">
           H.265 ⚠
