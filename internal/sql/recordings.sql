@@ -44,9 +44,3 @@ ORDER BY started_at DESC
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
 
--- name: ListCameraRecordingHealth :many
-SELECT c.id, c.name, c.enabled, MAX(r.started_at)::timestamptz AS last_started_at
-FROM cameras c
-LEFT JOIN recordings r ON r.camera_id = c.id
-GROUP BY c.id, c.name, c.enabled
-ORDER BY c.name;

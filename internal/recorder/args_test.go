@@ -10,7 +10,7 @@ import (
 func argsString(args []string) string { return strings.Join(args, " ") }
 
 func TestBuildArgsCopyCamera(t *testing.T) {
-	cam := sqlc.Camera{Name: "front-door", TranscodeVideo: false}
+	cam := sqlc.Camera{Name: "front-door"}
 	cfg := Config{RecordingsDir: "/rec", RTSPBase: "rtsp://127.0.0.1:8554"}
 
 	got := argsString(buildArgs(cam, 10, cfg))
@@ -28,22 +28,10 @@ func TestBuildArgsCopyCamera(t *testing.T) {
 			t.Errorf("missing %q in:\n%s", want, got)
 		}
 	}
+	// Recording must never re-encode video: on the 4K H.265 camera that measured
+	// 21.7 Mbps against a 2.05 Mbps source, filling the deploy host in ~3 days.
 	if strings.Contains(got, "libx264") {
-		t.Errorf("copy camera must not encode:\n%s", got)
-	}
-}
-
-func TestBuildArgsTranscodeCamera(t *testing.T) {
-	cam := sqlc.Camera{Name: "cashier", TranscodeVideo: true}
-	cfg := Config{RecordingsDir: "/rec", RTSPBase: "rtsp://127.0.0.1:8554"}
-
-	got := argsString(buildArgs(cam, 10, cfg))
-
-	if !strings.Contains(got, "-c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p -g 60") {
-		t.Errorf("missing encode args:\n%s", got)
-	}
-	if strings.Contains(got, "-c:v copy") {
-		t.Errorf("transcode camera must not copy video:\n%s", got)
+		t.Errorf("recording must never encode video:\n%s", got)
 	}
 }
 

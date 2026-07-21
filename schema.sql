@@ -11,7 +11,6 @@ CREATE TABLE "public"."cameras" (
   "codec" text NULL,
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now(),
-  "transcode_video" boolean NOT NULL DEFAULT false,
   PRIMARY KEY ("id")
 );
 -- Create index "cameras_name_key" to table: "cameras"
@@ -22,8 +21,6 @@ COMMENT ON COLUMN "public"."cameras"."name" IS 'URL-safe slug; also the mediamtx
 COMMENT ON COLUMN "public"."cameras"."rtsp_url" IS 'Full RTSP URL including credentials (plaintext v1; TODO: AES-GCM)';
 -- Set comment to column: "codec" on table: "cameras"
 COMMENT ON COLUMN "public"."cameras"."codec" IS 'Detected codec: h264 | h265 | null';
--- Set comment to column: "transcode_video" on table: "cameras"
-COMMENT ON COLUMN "public"."cameras"."transcode_video" IS 'Re-encode video to H.264 when recording (needed for H.265 cameras)';
 -- Create "users" table
 CREATE TABLE "public"."users" (
   "id" bigserial NOT NULL,

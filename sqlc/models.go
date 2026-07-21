@@ -19,8 +19,6 @@ type Camera struct {
 	Codec     pgtype.Text        `db:"codec" json:"codec"`
 	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	// Re-encode video to H.264 when recording (needed for H.265 cameras)
-	TranscodeVideo bool `db:"transcode_video" json:"transcode_video"`
 }
 
 type Recording struct {

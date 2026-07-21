@@ -78,11 +78,6 @@
           disabled
         </div>
         {{end}}
-        {{if index $.Stale .ID}}
-        <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-red-50 shadow-neu-sm text-red-600 text-xs font-medium">
-          not recording
-        </div>
-        {{end}}
         {{if .Codec.Valid}}{{if eq .Codec.String "h265"}}
         <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-amber-50 shadow-neu-sm text-amber-700 text-xs font-medium">
           H.265 ⚠
@@ -96,7 +91,7 @@
         {{if eq $.Claims.Role "admin"}}
         <div class="flex gap-1 flex-shrink-0 ml-2">
           <button
-            onclick="editCamera({{.ID}}, '{{.Name}}', '{{.RtspUrl}}', {{.Enabled}}, {{.TranscodeVideo}})"
+            onclick="editCamera({{.ID}}, '{{.Name}}', '{{.RtspUrl}}', {{.Enabled}})"
             class="px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium hover:text-neu-accent hover:-translate-y-px hover:shadow-neu transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
             Edit
           </button>
@@ -142,10 +137,6 @@
       <div class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neu-inset-sm">
         <input id="camera-enabled" type="checkbox" checked class="w-4 h-4 rounded accent-neu-accent"/>
         <label class="text-sm font-medium text-neu-fg">Enabled</label>
-      </div>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neu-inset-sm">
-        <input id="camera-transcode" type="checkbox" class="w-4 h-4 rounded accent-neu-accent"/>
-        <label class="text-sm font-medium text-neu-fg">Transcode video to H.264 <span class="text-neu-muted">(needed for H.265 cameras)</span></label>
       </div>
       <div class="flex gap-3 pt-2">
         <button type="submit"
@@ -269,18 +260,16 @@ function openAddCamera() {
   document.getElementById('camera-name').value = '';
   document.getElementById('camera-rtsp').value = '';
   document.getElementById('camera-enabled').checked = true;
-  document.getElementById('camera-transcode').checked = false;
   document.getElementById('camera-error').classList.add('hidden');
   document.getElementById('camera-modal').classList.remove('hidden');
 }
 
-function editCamera(id, name, rtsp, enabled, transcode) {
+function editCamera(id, name, rtsp, enabled) {
   document.getElementById('camera-modal-title').textContent = 'Edit Camera';
   document.getElementById('camera-id').value = id;
   document.getElementById('camera-name').value = name;
   document.getElementById('camera-rtsp').value = rtsp;
   document.getElementById('camera-enabled').checked = enabled;
-  document.getElementById('camera-transcode').checked = transcode;
   document.getElementById('camera-error').classList.add('hidden');
   document.getElementById('camera-modal').classList.remove('hidden');
 }
@@ -296,7 +285,6 @@ document.getElementById('camera-form').addEventListener('submit', async (e) => {
     name: document.getElementById('camera-name').value,
     rtsp_url: document.getElementById('camera-rtsp').value,
     enabled: document.getElementById('camera-enabled').checked,
-    transcode_video: document.getElementById('camera-transcode').checked,
   };
   const method = id ? 'PUT' : 'POST';
   const url = id ? '/api/cameras/' + id : '/api/cameras';

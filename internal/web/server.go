@@ -280,30 +280,9 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error loading cameras", http.StatusInternalServerError)
 		return
 	}
-	// Stale = no new segment for more than two segment durations. mediamtx no
-	// longer records as a fallback, so this is the visible signal that the
-	// recorder for a camera has stopped producing.
-	segMin := s.settings.Get().SegmentMinutes
-	if segMin <= 0 {
-		segMin = 10
-	}
-	limit := time.Duration(2*segMin) * time.Minute
-	stale := make(map[int64]bool, len(cameras))
-	if rows, hErr := s.q.ListCameraRecordingHealth(r.Context()); hErr == nil {
-		for _, row := range rows {
-			if !row.Enabled {
-				continue
-			}
-			stale[row.ID] = !row.LastStartedAt.Valid || time.Since(row.LastStartedAt.Time) > limit
-		}
-	} else {
-		slog.Warn("dashboard: recording health", "err", hErr)
-	}
-
 	s.render(w, "dashboard.html", map[string]interface{}{
 		"Claims":     auth.ClaimsFromCtx(r.Context()),
 		"Cameras":    cameras,
-		"Stale":      stale,
 		"HLSBase":    "/hls",
 		"WebRTCBase": "/webrtc",
 	})
@@ -336,16 +315,15 @@ func (s *Server) apiListCameras(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apiCreateCamera(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name           string `json:"name"`
-		RtspURL        string `json:"rtsp_url"`
-		TranscodeVideo bool   `json:"transcode_video"`
+		Name    string `json:"name"`
+		RtspURL string `json:"rtsp_url"`
 	}
 	if err := render.DecodeJSON(r.Body, &body); err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	cam, err := s.camSvc.Create(r.Context(), body.Name, body.RtspURL, body.TranscodeVideo)
+	cam, err := s.camSvc.Create(r.Context(), body.Name, body.RtspURL)
 	if err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return
@@ -361,17 +339,16 @@ func (s *Server) apiUpdateCamera(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name           string `json:"name"`
-		RtspURL        string `json:"rtsp_url"`
-		Enabled        bool   `json:"enabled"`
-		TranscodeVideo bool   `json:"transcode_video"`
+		Name    string `json:"name"`
+		RtspURL string `json:"rtsp_url"`
+		Enabled bool   `json:"enabled"`
 	}
 	if err = render.DecodeJSON(r.Body, &body); err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	cam, err := s.camSvc.Update(r.Context(), id, body.Name, body.RtspURL, body.Enabled, body.TranscodeVideo)
+	cam, err := s.camSvc.Update(r.Context(), id, body.Name, body.RtspURL, body.Enabled)
 	if err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return

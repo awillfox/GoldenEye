@@ -1,6 +1,6 @@
 -- name: CreateCamera :one
-INSERT INTO cameras (name, rtsp_url, enabled, transcode_video)
-VALUES ($1, $2, $3, $4)
+INSERT INTO cameras (name, rtsp_url, enabled)
+VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: GetCamera :one
@@ -17,12 +17,11 @@ SELECT * FROM cameras WHERE enabled = true ORDER BY created_at ASC;
 
 -- name: UpdateCamera :one
 UPDATE cameras
-SET name            = $2,
-    rtsp_url        = $3,
-    enabled         = $4,
-    codec           = $5,
-    transcode_video = $6,
-    updated_at      = now()
+SET name       = $2,
+    rtsp_url   = $3,
+    enabled    = $4,
+    codec      = $5,
+    updated_at = now()
 WHERE id = $1
 RETURNING *;
 

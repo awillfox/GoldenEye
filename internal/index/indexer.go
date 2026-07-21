@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"golden_eye/internal/config"
 	"golden_eye/sqlc"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -27,50 +26,15 @@ type Indexer struct {
 	q             *sqlc.Queries
 	recordingsDir string
 	interval      time.Duration
-	settings      *config.Manager
 }
 
 // New creates an Indexer.
-func New(db *pgxpool.Pool, recordingsDir string, interval time.Duration, settings *config.Manager) *Indexer {
+func New(db *pgxpool.Pool, recordingsDir string, interval time.Duration) *Indexer {
 	return &Indexer{
 		db:            db,
 		q:             sqlc.New(db),
 		recordingsDir: recordingsDir,
 		interval:      interval,
-		settings:      settings,
-	}
-}
-
-// checkStale warns when an enabled camera has produced no segment for longer
-// than two segment durations. mediamtx no longer records as a fallback, so a
-// wedged recorder would otherwise be silent data loss.
-func (idx *Indexer) checkStale(ctx context.Context) {
-	segMin := idx.settings.Get().SegmentMinutes
-	if segMin <= 0 {
-		segMin = 10
-	}
-	limit := time.Duration(2*segMin) * time.Minute
-
-	rows, err := idx.q.ListCameraRecordingHealth(ctx)
-	if err != nil {
-		slog.Warn("indexer: recording health", "err", err)
-		return
-	}
-	for _, row := range rows {
-		if !row.Enabled {
-			continue
-		}
-		if !row.LastStartedAt.Valid {
-			slog.Warn("camera has no recordings at all", "camera", row.Name)
-			continue
-		}
-		if age := time.Since(row.LastStartedAt.Time); age > limit {
-			slog.Warn("camera recording is stale",
-				"camera", row.Name,
-				"last_segment", row.LastStartedAt.Time,
-				"age", age.Round(time.Minute),
-				"limit", limit)
-		}
 	}
 }
 
@@ -179,8 +143,6 @@ func (idx *Indexer) scan(ctx context.Context) {
 	if err != nil {
 		slog.Error("indexer: walk", "err", err)
 	}
-
-	idx.checkStale(ctx)
 }
 
 // generateMeta runs ffprobe for duration and ffmpeg for thumbnail, then saves to DB.
