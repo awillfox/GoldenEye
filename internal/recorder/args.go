@@ -31,9 +31,20 @@ func OutputDir(cfg Config, camName string) string {
 //
 // The input is mediamtx's native path for the camera, so the camera itself is
 // never opened a second time. Audio is always re-encoded to AAC. Video is copied
-// unless the camera is flagged for transcoding, which costs real CPU (measured:
-// ~140% of one core for a 4K H.265 stream) and is only needed for cameras
-// browsers cannot decode.
+// unless the camera is flagged for transcoding.
+//
+// Transcoding is expensive in both dimensions, measured on the 4K H.265 cashier
+// stream on the deploy host (2026-07-21):
+//
+//	preset ultrafast, no rate control  21.7 Mbps  ~141% CPU   (~234 GB/day)
+//	preset ultrafast, -crf 28           9.9 Mbps  ~131% CPU   (~107 GB/day)
+//	preset veryfast,  -crf 28           2.8 Mbps  ~197% CPU   (~30 GB/day)
+//	preset veryfast,  -crf 28, 1080p    0.9 Mbps  ~101% CPU   (~10 GB/day)
+//
+// The source itself is only 2.05 Mbps, so the settings below inflate storage
+// ~10x. They are left as-is because no camera currently sets the flag; before
+// enabling it on a high-resolution camera, add rate control and re-measure, or
+// the disk fills in days rather than the configured retention window.
 //
 // Segments are cut by ffmpeg's segment muxer with -segment_atclocktime, so
 // boundaries land on wall-clock multiples of the segment duration rather than

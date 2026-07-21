@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -245,16 +246,31 @@ func (s *Supervisor) sleepOrDone(ctx context.Context, d time.Duration) bool {
 	}
 }
 
-// noisyWarning matches ffmpeg warnings that fire per-frame rather than per
-// event. The cameras' RTSP output repeats a DTS on roughly a third of packets
-// (measured on the 4K H.265 stream); ffmpeg nudges each duplicate forward by one
-// timebase unit — 11µs at 1/90000 — which is imperceptible, but logging every
-// occurrence buries real errors under ~10 lines per second.
-const noisyWarning = "Non-monotonic DTS"
+// Some ffmpeg warnings fire per frame rather than per event, and two distinct
+// ones already occur on these cameras: the RTSP output repeats a DTS on roughly
+// a third of packets, and the H.265 streams carry prefix SEI NALs the decoder
+// rejects. Each produced ~10 lines/second, burying real errors. Rather than
+// enumerate patterns that will keep growing, every distinct warning is logged in
+// full once and thereafter counted, so nothing is ever hidden outright.
 
 // noisySummaryInterval bounds how long a burst of suppressed warnings can go
 // unreported. A recorder can run for days, so waiting for EOF is not enough.
 const noisySummaryInterval = 10 * time.Minute
+
+// maxDistinctWarnings caps the dedup map. Normalisation should collapse
+// variants, but a pathological stream must not grow the map without bound;
+// beyond the cap, further distinct warnings share one bucket.
+const maxDistinctWarnings = 64
+
+// warningNoise matches the parts of an ffmpeg log line that vary between
+// otherwise identical warnings: allocator addresses and any run of digits.
+var warningNoise = regexp.MustCompile(`0x[0-9a-f]+|\d+`)
+
+// normalizeWarning collapses one ffmpeg line to a key shared by all its repeats,
+// so "previous: 784583" and "previous: 795383" count as the same warning.
+func normalizeWarning(line string) string {
+	return warningNoise.ReplaceAllString(line, "#")
+}
 
 // logStderr drains ffmpeg's stderr into slog, tagged with the camera. The
 // returned channel closes once the pipe hits EOF, which happens when the
@@ -267,41 +283,44 @@ func logStderr(camName string, r io.Reader) <-chan struct{} {
 	go func() {
 		defer close(done)
 
-		var (
-			suppressed    int
-			loggedExample bool
-			windowStart   = time.Now()
-		)
-		reportSuppressed := func() {
-			if suppressed == 0 {
-				return
+		// repeats counts occurrences of each distinct warning since the last
+		// summary; example keeps one verbatim line per key for the summary.
+		repeats := make(map[string]int)
+		example := make(map[string]string)
+		windowStart := time.Now()
+
+		reportRepeats := func() {
+			for key, n := range repeats {
+				slog.Warn("ffmpeg: repeated warning suppressed",
+					"camera", camName, "count", n,
+					"window", time.Since(windowStart).Round(time.Second),
+					"msg", example[key])
 			}
-			slog.Warn("ffmpeg: repeated warning suppressed",
-				"camera", camName, "warning", noisyWarning, "count", suppressed,
-				"window", time.Since(windowStart).Round(time.Second))
-			suppressed = 0
+			clear(repeats)
 			windowStart = time.Now()
 		}
 
 		sc := bufio.NewScanner(r)
 		for sc.Scan() {
 			line := sc.Text()
-			if strings.Contains(line, noisyWarning) {
-				if !loggedExample {
-					// Log one full example so the warning is never invisible.
-					slog.Warn("ffmpeg", "camera", camName, "msg", line)
-					loggedExample = true
-					continue
-				}
-				suppressed++
-				if time.Since(windowStart) >= noisySummaryInterval {
-					reportSuppressed()
-				}
+			key := normalizeWarning(line)
+			if len(example) >= maxDistinctWarnings {
+				key = "<other>"
+			}
+
+			if _, seen := example[key]; !seen {
+				// First sighting of this warning: log it in full.
+				example[key] = line
+				slog.Warn("ffmpeg", "camera", camName, "msg", line)
 				continue
 			}
-			slog.Warn("ffmpeg", "camera", camName, "msg", line)
+			repeats[key]++
+
+			if time.Since(windowStart) >= noisySummaryInterval {
+				reportRepeats()
+			}
 		}
-		reportSuppressed()
+		reportRepeats()
 	}()
 	return done
 }
