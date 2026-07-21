@@ -245,17 +245,63 @@ func (s *Supervisor) sleepOrDone(ctx context.Context, d time.Duration) bool {
 	}
 }
 
+// noisyWarning matches ffmpeg warnings that fire per-frame rather than per
+// event. The cameras' RTSP output repeats a DTS on roughly a third of packets
+// (measured on the 4K H.265 stream); ffmpeg nudges each duplicate forward by one
+// timebase unit — 11µs at 1/90000 — which is imperceptible, but logging every
+// occurrence buries real errors under ~10 lines per second.
+const noisyWarning = "Non-monotonic DTS"
+
+// noisySummaryInterval bounds how long a burst of suppressed warnings can go
+// unreported. A recorder can run for days, so waiting for EOF is not enough.
+const noisySummaryInterval = 10 * time.Minute
+
 // logStderr drains ffmpeg's stderr into slog, tagged with the camera. The
 // returned channel closes once the pipe hits EOF, which happens when the
 // process exits — so the caller can wait on it before calling cmd.Wait.
+//
+// Noisy per-frame warnings are logged once, then counted and reported as a
+// periodic summary instead of line by line.
 func logStderr(camName string, r io.Reader) <-chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
+
+		var (
+			suppressed    int
+			loggedExample bool
+			windowStart   = time.Now()
+		)
+		reportSuppressed := func() {
+			if suppressed == 0 {
+				return
+			}
+			slog.Warn("ffmpeg: repeated warning suppressed",
+				"camera", camName, "warning", noisyWarning, "count", suppressed,
+				"window", time.Since(windowStart).Round(time.Second))
+			suppressed = 0
+			windowStart = time.Now()
+		}
+
 		sc := bufio.NewScanner(r)
 		for sc.Scan() {
-			slog.Warn("ffmpeg", "camera", camName, "msg", sc.Text())
+			line := sc.Text()
+			if strings.Contains(line, noisyWarning) {
+				if !loggedExample {
+					// Log one full example so the warning is never invisible.
+					slog.Warn("ffmpeg", "camera", camName, "msg", line)
+					loggedExample = true
+					continue
+				}
+				suppressed++
+				if time.Since(windowStart) >= noisySummaryInterval {
+					reportSuppressed()
+				}
+				continue
+			}
+			slog.Warn("ffmpeg", "camera", camName, "msg", line)
 		}
+		reportSuppressed()
 	}()
 	return done
 }
