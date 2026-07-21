@@ -315,15 +315,16 @@ func (s *Server) apiListCameras(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apiCreateCamera(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name    string `json:"name"`
-		RtspURL string `json:"rtsp_url"`
+		Name           string `json:"name"`
+		RtspURL        string `json:"rtsp_url"`
+		TranscodeVideo bool   `json:"transcode_video"`
 	}
 	if err := render.DecodeJSON(r.Body, &body); err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	cam, err := s.camSvc.Create(r.Context(), body.Name, body.RtspURL)
+	cam, err := s.camSvc.Create(r.Context(), body.Name, body.RtspURL, body.TranscodeVideo)
 	if err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return
@@ -339,16 +340,17 @@ func (s *Server) apiUpdateCamera(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name    string `json:"name"`
-		RtspURL string `json:"rtsp_url"`
-		Enabled bool   `json:"enabled"`
+		Name           string `json:"name"`
+		RtspURL        string `json:"rtsp_url"`
+		Enabled        bool   `json:"enabled"`
+		TranscodeVideo bool   `json:"transcode_video"`
 	}
 	if err = render.DecodeJSON(r.Body, &body); err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	cam, err := s.camSvc.Update(r.Context(), id, body.Name, body.RtspURL, body.Enabled)
+	cam, err := s.camSvc.Update(r.Context(), id, body.Name, body.RtspURL, body.Enabled, body.TranscodeVideo)
 	if err != nil {
 		renderErr(w, r, http.StatusBadRequest, err)
 		return

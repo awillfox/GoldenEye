@@ -12,19 +12,25 @@ import (
 )
 
 const createCamera = `-- name: CreateCamera :one
-INSERT INTO cameras (name, rtsp_url, enabled)
-VALUES ($1, $2, $3)
-RETURNING id, name, rtsp_url, enabled, codec, created_at, updated_at
+INSERT INTO cameras (name, rtsp_url, enabled, transcode_video)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video
 `
 
 type CreateCameraParams struct {
-	Name    string `db:"name" json:"name"`
-	RtspUrl string `db:"rtsp_url" json:"rtsp_url"`
-	Enabled bool   `db:"enabled" json:"enabled"`
+	Name           string `db:"name" json:"name"`
+	RtspUrl        string `db:"rtsp_url" json:"rtsp_url"`
+	Enabled        bool   `db:"enabled" json:"enabled"`
+	TranscodeVideo bool   `db:"transcode_video" json:"transcode_video"`
 }
 
 func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) (Camera, error) {
-	row := q.db.QueryRow(ctx, createCamera, arg.Name, arg.RtspUrl, arg.Enabled)
+	row := q.db.QueryRow(ctx, createCamera,
+		arg.Name,
+		arg.RtspUrl,
+		arg.Enabled,
+		arg.TranscodeVideo,
+	)
 	var i Camera
 	err := row.Scan(
 		&i.ID,
@@ -34,6 +40,7 @@ func (q *Queries) CreateCamera(ctx context.Context, arg CreateCameraParams) (Cam
 		&i.Codec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TranscodeVideo,
 	)
 	return i, err
 }
@@ -48,7 +55,7 @@ func (q *Queries) DeleteCamera(ctx context.Context, id int64) error {
 }
 
 const getCamera = `-- name: GetCamera :one
-SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at FROM cameras WHERE id = $1
+SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video FROM cameras WHERE id = $1
 `
 
 func (q *Queries) GetCamera(ctx context.Context, id int64) (Camera, error) {
@@ -62,12 +69,13 @@ func (q *Queries) GetCamera(ctx context.Context, id int64) (Camera, error) {
 		&i.Codec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TranscodeVideo,
 	)
 	return i, err
 }
 
 const getCameraByName = `-- name: GetCameraByName :one
-SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at FROM cameras WHERE name = $1
+SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video FROM cameras WHERE name = $1
 `
 
 func (q *Queries) GetCameraByName(ctx context.Context, name string) (Camera, error) {
@@ -81,12 +89,13 @@ func (q *Queries) GetCameraByName(ctx context.Context, name string) (Camera, err
 		&i.Codec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TranscodeVideo,
 	)
 	return i, err
 }
 
 const listCameras = `-- name: ListCameras :many
-SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at FROM cameras ORDER BY created_at ASC
+SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video FROM cameras ORDER BY created_at ASC
 `
 
 func (q *Queries) ListCameras(ctx context.Context) ([]Camera, error) {
@@ -106,6 +115,7 @@ func (q *Queries) ListCameras(ctx context.Context) ([]Camera, error) {
 			&i.Codec,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TranscodeVideo,
 		); err != nil {
 			return nil, err
 		}
@@ -118,7 +128,7 @@ func (q *Queries) ListCameras(ctx context.Context) ([]Camera, error) {
 }
 
 const listEnabledCameras = `-- name: ListEnabledCameras :many
-SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at FROM cameras WHERE enabled = true ORDER BY created_at ASC
+SELECT id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video FROM cameras WHERE enabled = true ORDER BY created_at ASC
 `
 
 func (q *Queries) ListEnabledCameras(ctx context.Context) ([]Camera, error) {
@@ -138,6 +148,7 @@ func (q *Queries) ListEnabledCameras(ctx context.Context) ([]Camera, error) {
 			&i.Codec,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TranscodeVideo,
 		); err != nil {
 			return nil, err
 		}
@@ -151,21 +162,23 @@ func (q *Queries) ListEnabledCameras(ctx context.Context) ([]Camera, error) {
 
 const updateCamera = `-- name: UpdateCamera :one
 UPDATE cameras
-SET name       = $2,
-    rtsp_url   = $3,
-    enabled    = $4,
-    codec      = $5,
-    updated_at = now()
+SET name            = $2,
+    rtsp_url        = $3,
+    enabled         = $4,
+    codec           = $5,
+    transcode_video = $6,
+    updated_at      = now()
 WHERE id = $1
-RETURNING id, name, rtsp_url, enabled, codec, created_at, updated_at
+RETURNING id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video
 `
 
 type UpdateCameraParams struct {
-	ID      int64       `db:"id" json:"id"`
-	Name    string      `db:"name" json:"name"`
-	RtspUrl string      `db:"rtsp_url" json:"rtsp_url"`
-	Enabled bool        `db:"enabled" json:"enabled"`
-	Codec   pgtype.Text `db:"codec" json:"codec"`
+	ID             int64       `db:"id" json:"id"`
+	Name           string      `db:"name" json:"name"`
+	RtspUrl        string      `db:"rtsp_url" json:"rtsp_url"`
+	Enabled        bool        `db:"enabled" json:"enabled"`
+	Codec          pgtype.Text `db:"codec" json:"codec"`
+	TranscodeVideo bool        `db:"transcode_video" json:"transcode_video"`
 }
 
 func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Camera, error) {
@@ -175,6 +188,7 @@ func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Cam
 		arg.RtspUrl,
 		arg.Enabled,
 		arg.Codec,
+		arg.TranscodeVideo,
 	)
 	var i Camera
 	err := row.Scan(
@@ -185,6 +199,7 @@ func (q *Queries) UpdateCamera(ctx context.Context, arg UpdateCameraParams) (Cam
 		&i.Codec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TranscodeVideo,
 	)
 	return i, err
 }
@@ -194,7 +209,7 @@ UPDATE cameras
 SET codec      = $2,
     updated_at = now()
 WHERE id = $1
-RETURNING id, name, rtsp_url, enabled, codec, created_at, updated_at
+RETURNING id, name, rtsp_url, enabled, codec, created_at, updated_at, transcode_video
 `
 
 type UpdateCameraCodecParams struct {
@@ -213,6 +228,7 @@ func (q *Queries) UpdateCameraCodec(ctx context.Context, arg UpdateCameraCodecPa
 		&i.Codec,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TranscodeVideo,
 	)
 	return i, err
 }

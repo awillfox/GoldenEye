@@ -82,15 +82,16 @@ func (s *Service) Reconcile(ctx context.Context) error {
 }
 
 // Create adds a camera to the DB and registers its mediamtx path.
-func (s *Service) Create(ctx context.Context, name, rtspURL string) (*sqlc.Camera, error) {
+func (s *Service) Create(ctx context.Context, name, rtspURL string, transcodeVideo bool) (*sqlc.Camera, error) {
 	if !validName.MatchString(name) {
 		return nil, fmt.Errorf("camera name must be lowercase alphanumeric/dash/underscore, 1-63 chars")
 	}
 
 	cam, err := s.q.CreateCamera(ctx, sqlc.CreateCameraParams{
-		Name:    name,
-		RtspUrl: rtspURL,
-		Enabled: true,
+		Name:           name,
+		RtspUrl:        rtspURL,
+		Enabled:        true,
+		TranscodeVideo: transcodeVideo,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create camera: %w", err)
@@ -107,7 +108,7 @@ func (s *Service) Create(ctx context.Context, name, rtspURL string) (*sqlc.Camer
 }
 
 // Update modifies a camera and syncs mediamtx.
-func (s *Service) Update(ctx context.Context, id int64, name, rtspURL string, enabled bool) (*sqlc.Camera, error) {
+func (s *Service) Update(ctx context.Context, id int64, name, rtspURL string, enabled, transcodeVideo bool) (*sqlc.Camera, error) {
 	if !validName.MatchString(name) {
 		return nil, fmt.Errorf("camera name must be lowercase alphanumeric/dash/underscore, 1-63 chars")
 	}
@@ -118,11 +119,12 @@ func (s *Service) Update(ctx context.Context, id int64, name, rtspURL string, en
 	}
 
 	cam, err := s.q.UpdateCamera(ctx, sqlc.UpdateCameraParams{
-		ID:      id,
-		Name:    name,
-		RtspUrl: rtspURL,
-		Enabled: enabled,
-		Codec:   old.Codec,
+		ID:             id,
+		Name:           name,
+		RtspUrl:        rtspURL,
+		Enabled:        enabled,
+		Codec:          old.Codec,
+		TranscodeVideo: transcodeVideo,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update camera: %w", err)

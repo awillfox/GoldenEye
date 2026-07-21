@@ -72,7 +72,7 @@ func (q *Queries) DeleteRecording(ctx context.Context, id int64) error {
 }
 
 const getRecording = `-- name: GetRecording :one
-SELECT id, camera_id, path, started_at, ended_at, size_bytes, created_at, thumbnail_path, duration_secs FROM recordings WHERE id = $1
+SELECT id, camera_id, path, started_at, ended_at, size_bytes, thumbnail_path, duration_secs, created_at FROM recordings WHERE id = $1
 `
 
 func (q *Queries) GetRecording(ctx context.Context, id int64) (Recording, error) {
@@ -85,15 +85,15 @@ func (q *Queries) GetRecording(ctx context.Context, id int64) (Recording, error)
 		&i.StartedAt,
 		&i.EndedAt,
 		&i.SizeBytes,
-		&i.CreatedAt,
 		&i.ThumbnailPath,
 		&i.DurationSecs,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listRecordings = `-- name: ListRecordings :many
-SELECT id, camera_id, path, started_at, ended_at, size_bytes, created_at, thumbnail_path, duration_secs FROM recordings
+SELECT id, camera_id, path, started_at, ended_at, size_bytes, thumbnail_path, duration_secs, created_at FROM recordings
 WHERE ($1::bigint IS NULL OR camera_id = $1::bigint)
   AND ($2::timestamptz IS NULL OR started_at >= $2::timestamptz)
   AND ($3::timestamptz   IS NULL OR started_at <  $3::timestamptz)
@@ -132,9 +132,9 @@ func (q *Queries) ListRecordings(ctx context.Context, arg ListRecordingsParams) 
 			&i.StartedAt,
 			&i.EndedAt,
 			&i.SizeBytes,
-			&i.CreatedAt,
 			&i.ThumbnailPath,
 			&i.DurationSecs,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func (q *Queries) ListRecordings(ctx context.Context, arg ListRecordingsParams) 
 }
 
 const listRecordingsByCamera = `-- name: ListRecordingsByCamera :many
-SELECT id, camera_id, path, started_at, ended_at, size_bytes, created_at, thumbnail_path, duration_secs FROM recordings
+SELECT id, camera_id, path, started_at, ended_at, size_bytes, thumbnail_path, duration_secs, created_at FROM recordings
 WHERE camera_id = $1
   AND ($2::timestamptz IS NULL OR started_at >= $2::timestamptz)
   AND ($3::timestamptz   IS NULL OR started_at <  $3::timestamptz)
@@ -186,9 +186,9 @@ func (q *Queries) ListRecordingsByCamera(ctx context.Context, arg ListRecordings
 			&i.StartedAt,
 			&i.EndedAt,
 			&i.SizeBytes,
-			&i.CreatedAt,
 			&i.ThumbnailPath,
 			&i.DurationSecs,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -221,7 +221,7 @@ VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (path) DO UPDATE
 SET ended_at   = EXCLUDED.ended_at,
     size_bytes = EXCLUDED.size_bytes
-RETURNING id, camera_id, path, started_at, ended_at, size_bytes, created_at, thumbnail_path, duration_secs
+RETURNING id, camera_id, path, started_at, ended_at, size_bytes, thumbnail_path, duration_secs, created_at
 `
 
 type UpsertRecordingParams struct {
@@ -248,9 +248,9 @@ func (q *Queries) UpsertRecording(ctx context.Context, arg UpsertRecordingParams
 		&i.StartedAt,
 		&i.EndedAt,
 		&i.SizeBytes,
-		&i.CreatedAt,
 		&i.ThumbnailPath,
 		&i.DurationSecs,
+		&i.CreatedAt,
 	)
 	return i, err
 }

@@ -62,6 +62,12 @@ table "cameras" {
     null    = true
     comment = "Detected codec: h264 | h265 | null"
   }
+  column "transcode_video" {
+    type    = boolean
+    null    = false
+    default = false
+    comment = "Re-encode video to H.264 when recording (needed for H.265 cameras)"
+  }
   column "created_at" {
     type    = timestamptz
     null    = false
