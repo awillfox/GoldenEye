@@ -43,4 +43,3 @@ WHERE (sqlc.narg('camera_id')::bigint IS NULL OR camera_id = sqlc.narg('camera_i
 ORDER BY started_at DESC
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
-
