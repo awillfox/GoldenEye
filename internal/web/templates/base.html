@@ -1,166 +1,228 @@
 {{define "base"}}<!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>GoldenEye NVR{{block "title" .}}{{end}}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="color-scheme" content="light dark"/>
+  <title>{{block "title" .}}{{end}} · GoldenEye</title>
   <link rel="stylesheet" href="/static/app.css"/>
 </head>
-<body class="h-full flex flex-col bg-neu-base font-body text-neu-fg">
+<body class="min-h-screen flex flex-col">
 
-<!-- ── Navigation ─────────────────────────────────────────────────────────── -->
-<nav class="sticky top-0 z-40 bg-neu-base shadow-neu-nav">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+<!-- Icon sprite: project-local outline icons, 24px grid, 1.75 stroke. -->
+<svg width="0" height="0" class="absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.5 21 7.5v9l-5.5-3z"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-tune" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16.5 9.5 5 5M21.5 9.5l-5 5"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-timeline" viewBox="0 0 24 24"><path d="M3 7h6M12 7h9M3 12h11M17 12h4M3 17h3M9 17h12"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5"/></symbol>
+  </defs>
+</svg>
 
-    <!-- Logo -->
-    <a href="/" class="flex items-center gap-3 group rounded-2xl focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-      <div class="w-10 h-10 rounded-2xl bg-neu-base shadow-neu-sm flex items-center justify-center group-hover:shadow-neu group-hover:-translate-y-px transition-all duration-300">
-        <svg class="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
-          <line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/>
-          <line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/>
-        </svg>
-      </div>
-      <span class="font-display font-bold tracking-widest text-neu-fg text-sm hidden sm:inline">GOLDENEYE</span>
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 btn btn-filled">Skip to content</a>
+
+<!-- App bar -->
+<header class="sticky top-0 z-40 bg-surface-low border-b border-outline-variant">
+  <div class="max-w-7xl mx-auto h-14 medium:h-16 flex items-center gap-2 medium:gap-6 pl-4 pr-2 medium:px-6">
+    <a href="/" class="flex items-center gap-2.5 font-bold text-base tracking-wide rounded-lg">
+      <span class="w-8 h-8 rounded-lg bg-primary-cont text-on-primary-cont grid place-items-center">
+        <svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg>
+      </span>
+      GoldenEye
     </a>
 
-    <!-- Desktop nav -->
-    <div class="hidden md:flex items-center gap-1 text-sm font-medium">
-      <a href="/" class="px-4 py-2 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">Dashboard</a>
-      <a href="/recordings" class="px-4 py-2 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">Recordings</a>
-      {{if .Claims}}
-        {{if eq .Claims.Role "admin"}}
-        <button type="button" onclick="openSettings()"
-          class="px-4 py-2 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-          Settings
-        </button>
-        {{end}}
-        <form method="POST" action="/logout" class="inline ml-2">
-          <button class="px-4 py-2 rounded-2xl bg-neu-base shadow-neu-sm text-neu-muted hover:text-neu-fg hover:shadow-neu hover:-translate-y-px active:translate-y-px active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-            Logout <span class="font-semibold text-neu-fg">({{.Claims.Username}})</span>
-          </button>
-        </form>
-      {{end}}
-    </div>
+    <!-- Top tabs: medium and wider. Compact uses the bottom bar. -->
+    <nav aria-label="Main" class="hidden medium:flex h-full">
+      <a href="/" class="nav-tab" {{if eq .Active "live"}}aria-current="page"{{end}}>
+        <svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg>Live
+      </a>
+      <a href="/recordings" class="nav-tab" {{if eq .Active "recordings"}}aria-current="page"{{end}}>
+        <svg class="icon" aria-hidden="true"><use href="#i-film"/></svg>Recordings
+      </a>
+    </nav>
 
-    <!-- Mobile hamburger -->
-    <button id="nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation"
-      class="md:hidden w-11 h-11 rounded-2xl bg-neu-base shadow-neu-sm flex items-center justify-center active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-      <svg id="icon-menu" class="w-5 h-5 text-neu-fg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-      <svg id="icon-close" class="w-5 h-5 text-neu-fg hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
-  </div>
+    <div class="flex-1"></div>
 
-  <!-- Mobile menu -->
-  <div id="mobile-nav" class="hidden md:hidden px-6 pb-4 space-y-1 border-t border-white/40 pt-3">
-    <a href="/" class="flex items-center px-4 py-3 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300">Dashboard</a>
-    <a href="/recordings" class="flex items-center px-4 py-3 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300">Recordings</a>
     {{if .Claims}}
+      <span class="hidden expanded:inline text-[0.8125rem] text-on-surface-variant">Signed in as <b class="text-on-surface">{{.Claims.Username}}</b></span>
       {{if eq .Claims.Role "admin"}}
-      <button type="button" onclick="openSettings(); toggleMobileNav()"
-        class="w-full text-left flex items-center px-4 py-3 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300">
-        Settings
+      <button type="button" class="btn btn-icon" onclick="openSettings(this)" aria-label="Settings" title="Settings">
+        <svg class="icon" aria-hidden="true"><use href="#i-tune"/></svg>
       </button>
       {{end}}
       <form method="POST" action="/logout">
-        <button class="w-full text-left flex items-center px-4 py-3 rounded-2xl text-neu-muted hover:text-neu-fg hover:shadow-neu-sm transition-all duration-300">
-          Logout ({{.Claims.Username}})
+        <button class="btn btn-icon medium:w-auto medium:px-3 medium:text-primary" aria-label="Sign out {{.Claims.Username}}" title="Sign out">
+          <svg class="icon medium:icon-sm" aria-hidden="true"><use href="#i-logout"/></svg>
+          <span class="hidden medium:inline">Sign out</span>
         </button>
       </form>
     {{end}}
   </div>
-</nav>
+</header>
 
-<main class="flex-1 overflow-auto p-6">
+<main id="main" class="flex-1 w-full max-w-7xl mx-auto p-4 medium:p-6 pb-28 medium:pb-6">
   {{block "content" .}}{{end}}
 </main>
 
-{{block "scripts" .}}{{end}}
+<!-- Bottom navigation bar: compact only. -->
+<nav aria-label="Main" class="medium:hidden fixed bottom-0 inset-x-0 z-40 flex bg-surface-low border-t border-outline-variant"
+     style="padding-bottom: env(safe-area-inset-bottom)">
+  <a href="/" class="navbar-item" {{if eq .Active "live"}}aria-current="page"{{end}}>
+    <span class="pill"><svg class="icon" aria-hidden="true"><use href="#i-camera"/></svg></span>Live
+  </a>
+  <a href="/recordings" class="navbar-item" {{if eq .Active "recordings"}}aria-current="page"{{end}}>
+    <span class="pill"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg></span>Recordings
+  </a>
+</nav>
 
-<!-- ── Settings Modal ─────────────────────────────────────────────────────── -->
-{{if .Claims}}{{if eq .Claims.Role "admin"}}
-<div id="settings-modal" class="hidden fixed inset-0 bg-neu-fg/10 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-  <div class="bg-neu-base shadow-neu-modal rounded-[32px] p-8 w-full max-w-sm">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="w-10 h-10 rounded-2xl bg-neu-base shadow-neu-inset flex items-center justify-center">
-        <svg class="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-      </div>
-      <h3 class="font-display font-bold text-lg text-neu-fg">Settings</h3>
-    </div>
-    <form id="settings-form" class="space-y-5">
-      <div>
-        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Retention (days)</label>
-        <input id="setting-retention" type="number" min="1"
-          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Segment length (minutes)</label>
-        <input id="setting-segment" type="number" min="1"
-          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
-      </div>
-      <div class="flex gap-3 pt-2">
-        <button type="submit"
-          class="flex-1 py-3 rounded-2xl bg-neu-accent text-white font-semibold shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-          Save
-        </button>
-        <button type="button" onclick="document.getElementById('settings-modal').classList.add('hidden')"
-          class="flex-1 py-3 rounded-2xl bg-neu-base shadow-neu-sm text-neu-muted font-medium hover:text-neu-fg hover:-translate-y-px hover:shadow-neu active:translate-y-px active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-          Cancel
-        </button>
-      </div>
-    </form>
-    <p id="settings-error" class="hidden mt-3 px-4 py-2 rounded-xl shadow-neu-inset-sm text-red-500 text-sm text-center"></p>
-  </div>
-</div>
+<div id="snackbar" class="snackbar hidden" role="status" aria-live="polite"></div>
+
 <script>
-async function openSettings() {
-  const res = await fetch('/api/settings');
-  const s = await res.json();
-  document.getElementById('setting-retention').value = s.retention_days;
-  document.getElementById('setting-segment').value = s.segment_minutes;
-  document.getElementById('settings-error').classList.add('hidden');
-  document.getElementById('settings-modal').classList.remove('hidden');
+// ── Shared helpers ───────────────────────────────────────────────────────────
+
+// esc escapes text for interpolation into HTML strings.
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+// apiError returns the server's {"error": "..."} message, or a status fallback.
+async function apiError(res) {
+  try { const j = await res.json(); if (j && j.error) return j.error; } catch (_) {}
+  return 'The server answered ' + res.status + '.';
+}
+
+// setBusy puts a submit button into its loading state (fixed width, spinner).
+function setBusy(btn, busy, busyLabel) {
+  if (busy) {
+    btn.dataset.label = btn.innerHTML;
+    btn.style.minWidth = btn.offsetWidth + 'px';
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>' + esc(busyLabel);
+  } else if (btn.dataset.label !== undefined) {
+    btn.innerHTML = btn.dataset.label;
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+    btn.style.minWidth = '';
+  }
+}
+
+// showError fills an error banner and announces it.
+function showError(el, msg) {
+  el.querySelector('[data-msg]').textContent = msg;
+  el.classList.remove('hidden');
+}
+
+let snackTimer;
+function snackbar(msg) {
+  const el = document.getElementById('snackbar');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+// Native <dialog>: Escape closes, outside content is inert, focus returns to
+// the opener. A click on the dialog element itself is a click on the backdrop.
+document.addEventListener('click', (e) => {
+  if (e.target instanceof HTMLDialogElement && e.target.classList.contains('dialog')) e.target.close();
+});
+</script>
+
+{{if .Claims}}{{if eq .Claims.Role "admin"}}
+<!-- Settings dialog -->
+<dialog id="settings-dialog" class="dialog w-[26rem]" aria-labelledby="settings-title">
+  <form id="settings-form" class="dialog-body" novalidate>
+    <h2 id="settings-title" class="dialog-title">Settings</h2>
+    <div class="flex flex-col gap-4 mt-4">
+      <div id="settings-error" class="banner-error hidden" role="alert">
+        <svg class="icon icon-sm mt-0.5" aria-hidden="true"><use href="#i-alert"/></svg><span data-msg></span>
+      </div>
+      <div class="field">
+        <label for="setting-retention" class="field-label">Keep recordings for (days)</label>
+        <input id="setting-retention" class="input tnum" type="number" min="1" step="1" required inputmode="numeric" aria-describedby="setting-retention-help"/>
+        <p id="setting-retention-help" class="field-help">Older recordings are deleted automatically every hour.</p>
+      </div>
+      <div class="field">
+        <label for="setting-segment" class="field-label">Segment length (minutes)</label>
+        <input id="setting-segment" class="input tnum" type="number" min="1" step="1" required inputmode="numeric" aria-describedby="setting-segment-help"/>
+        <p id="setting-segment-help" class="field-help">Length of each recording file. A new length applies after GoldenEye restarts or a camera is added, edited or deleted.</p>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-text" onclick="this.closest('dialog').close()">Cancel</button>
+      <button type="submit" class="btn btn-filled">Save</button>
+    </div>
+  </form>
+</dialog>
+<script>
+async function openSettings(opener) {
+  const dlg = document.getElementById('settings-dialog');
+  const err = document.getElementById('settings-error');
+  err.classList.add('hidden');
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) throw new Error(await apiError(res));
+    const s = await res.json();
+    document.getElementById('setting-retention').value = s.retention_days;
+    document.getElementById('setting-segment').value = s.segment_minutes;
+  } catch (e) {
+    showError(err, "Couldn't load settings. " + e.message);
+  }
+  dlg.showModal();
+}
+
 document.getElementById('settings-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const body = {
-    retention_days: parseInt(document.getElementById('setting-retention').value),
-    segment_minutes: parseInt(document.getElementById('setting-segment').value),
-  };
-  const res = await fetch('/api/settings', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const j = await res.json();
-    const el = document.getElementById('settings-error');
-    el.textContent = j.error || 'Save failed';
-    el.classList.remove('hidden');
+  const form = e.currentTarget;
+  const err = document.getElementById('settings-error');
+  const ret = document.getElementById('setting-retention');
+  const seg = document.getElementById('setting-segment');
+  err.classList.add('hidden');
+  for (const el of [ret, seg]) el.setAttribute('aria-invalid', String(!el.checkValidity()));
+  if (!ret.checkValidity() || !seg.checkValidity()) {
+    showError(err, 'Enter whole numbers of 1 or more.');
+    (ret.checkValidity() ? seg : ret).focus();
     return;
   }
-  document.getElementById('settings-modal').classList.add('hidden');
+  const btn = form.querySelector('[type=submit]');
+  setBusy(btn, true, 'Saving…');
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retention_days: parseInt(ret.value, 10), segment_minutes: parseInt(seg.value, 10) }),
+    });
+    if (!res.ok) throw new Error(await apiError(res));
+    document.getElementById('settings-dialog').close();
+    snackbar('Settings saved');
+  } catch (ex) {
+    showError(err, "Couldn't save settings. " + ex.message);
+  } finally {
+    setBusy(btn, false);
+  }
 });
 </script>
 {{end}}{{end}}
 
-<script>
-function toggleMobileNav() {
-  document.getElementById('mobile-nav').classList.toggle('hidden');
-  document.getElementById('icon-menu').classList.toggle('hidden');
-  document.getElementById('icon-close').classList.toggle('hidden');
-}
-</script>
+{{block "scripts" .}}{{end}}
 
 </body>
 </html>

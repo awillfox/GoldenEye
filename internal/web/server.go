@@ -281,6 +281,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, "dashboard.html", map[string]interface{}{
+		"Active":     "live",
 		"Claims":     auth.ClaimsFromCtx(r.Context()),
 		"Cameras":    cameras,
 		"HLSBase":    "/hls",
@@ -295,6 +296,7 @@ func (s *Server) recordingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, "recordings.html", map[string]interface{}{
+		"Active":  "recordings",
 		"Claims":  auth.ClaimsFromCtx(r.Context()),
 		"Cameras": cameras,
 	})
