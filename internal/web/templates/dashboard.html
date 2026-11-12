@@ -1,227 +1,276 @@
 {{template "base" .}}
 
-{{define "title"}} — Dashboard{{end}}
+{{define "title"}}Live{{end}}
 
 {{define "content"}}
-<div class="max-w-7xl mx-auto">
+{{$admin := eq .Claims.Role "admin"}}
 
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-8">
-    <div>
-      <h2 class="font-display font-bold text-2xl text-neu-fg">Live Cameras</h2>
-      <p class="text-neu-muted text-sm mt-0.5">
-        {{if .Cameras}}{{len .Cameras}} camera{{if gt (len .Cameras) 1}}s{{end}} connected{{else}}No cameras configured{{end}}
-      </p>
-    </div>
-    {{if eq .Claims.Role "admin"}}
-    <button
-      onclick="openAddCamera()"
-      class="flex items-center gap-2 px-5 py-3 rounded-2xl bg-neu-accent text-white font-display font-semibold text-sm shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base"
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-      </svg>
-      Add Camera
-    </button>
-    {{end}}
-  </div>
-
-  {{if not .Cameras}}
-  <!-- Empty state -->
-  <div class="flex flex-col items-center justify-center py-24">
-    <div class="w-24 h-24 rounded-[32px] bg-neu-base shadow-neu flex items-center justify-center mb-6">
-      <div class="w-14 h-14 rounded-2xl bg-neu-base shadow-neu-inset flex items-center justify-center">
-        <svg class="w-8 h-8 text-neu-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-        </svg>
-      </div>
-    </div>
-    <p class="font-display font-bold text-xl text-neu-fg">No cameras yet</p>
-    <p class="text-neu-muted text-sm mt-2">
-      {{if eq .Claims.Role "admin"}}Add your first camera to get started.{{else}}Contact your administrator.{{end}}
+<div class="flex items-end justify-between gap-4 flex-wrap mb-4 medium:mb-6">
+  <div>
+    <h1 class="text-2xl font-semibold">Live</h1>
+    <p id="camera-summary" class="text-on-surface-variant mt-0.5 tnum">
+      {{len .Cameras}} camera{{if ne (len .Cameras) 1}}s{{end}}
     </p>
   </div>
-  {{else}}
-  <!-- Camera grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    {{range .Cameras}}
-    <div class="bg-neu-base shadow-neu rounded-[32px] p-5 hover:shadow-neu-hover hover:-translate-y-0.5 transition-all duration-300">
-
-      <!-- Video well — deep inset "carved screen" -->
-      <div class="relative aspect-video bg-[#1a1f26] shadow-neu-inset-deep rounded-2xl overflow-hidden mb-4">
-        <video
-          id="player-{{.ID}}"
-          class="w-full h-full object-contain"
-          controls playsinline
-          data-whep="{{$.WebRTCBase}}/{{.Name}}-preview/whep"
-        ></video>
-
-        <!-- Stream overlay -->
-        <div id="overlay-{{.ID}}" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1a1f26]/80 backdrop-blur-[2px]">
-          <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-            <svg class="w-6 h-6 text-white/50" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 9.75v9A2.25 2.25 0 004.5 18.75z"/>
-            </svg>
-          </div>
-          <button
-            onclick="startStream({{.ID}})"
-            class="px-4 py-2 rounded-xl bg-neu-base shadow-neu-sm text-neu-accent font-semibold text-sm hover:shadow-neu hover:-translate-y-px active:translate-y-px active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent"
-          >
-            Watch Live
-          </button>
-        </div>
-
-        <!-- Status badges -->
-        {{if not .Enabled}}
-        <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium">
-          disabled
-        </div>
-        {{end}}
-        {{if .Codec.Valid}}{{if eq .Codec.String "h265"}}
-        <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-amber-50 shadow-neu-sm text-amber-700 text-xs font-medium">
-          H.265 ⚠
-        </div>
-        {{end}}{{end}}
-      </div>
-
-      <!-- Footer -->
-      <div class="flex items-center justify-between px-1">
-        <span class="font-semibold text-neu-fg truncate text-sm">{{.Name}}</span>
-        {{if eq $.Claims.Role "admin"}}
-        <div class="flex gap-1 flex-shrink-0 ml-2">
-          <button
-            onclick="editCamera({{.ID}}, '{{.Name}}', '{{.RtspUrl}}', {{.Enabled}})"
-            class="px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium hover:text-neu-accent hover:-translate-y-px hover:shadow-neu transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-            Edit
-          </button>
-          <button
-            onclick="deleteCamera({{.ID}})"
-            class="px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-muted text-xs font-medium hover:text-red-500 hover:-translate-y-px hover:shadow-neu transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-400">
-            Del
-          </button>
-        </div>
-        {{end}}
-      </div>
-    </div>
-    {{end}}
-  </div>
+  {{if $admin}}
+  <button type="button" class="btn btn-filled" onclick="openAddCamera()">
+    <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add camera
+  </button>
   {{end}}
-
 </div>
 
-<!-- Add/Edit Camera Modal -->
-<div id="camera-modal" class="hidden fixed inset-0 bg-neu-fg/10 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-  <div class="bg-neu-base shadow-neu-modal rounded-[32px] p-8 w-full max-w-md">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="w-10 h-10 rounded-2xl bg-neu-base shadow-neu-inset flex items-center justify-center">
-        <svg class="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 9.75v9A2.25 2.25 0 004.5 18.75z"/>
-        </svg>
-      </div>
-      <h3 id="camera-modal-title" class="font-display font-bold text-lg text-neu-fg">Add Camera</h3>
-    </div>
-    <form id="camera-form" class="space-y-5">
-      <input type="hidden" id="camera-id"/>
-      <div>
-        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Name (slug)</label>
-        <input id="camera-name" type="text" placeholder="front-door"
-          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg placeholder:text-neu-muted focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
-        <p class="text-xs text-neu-muted mt-1.5 pl-1">Lowercase letters, numbers, dashes.</p>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">RTSP URL</label>
-        <input id="camera-rtsp" type="text" placeholder="rtsp://user:pass@192.168.1.10:554/stream"
-          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg placeholder:text-neu-muted focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
-      </div>
-      <div class="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neu-inset-sm">
-        <input id="camera-enabled" type="checkbox" checked class="w-4 h-4 rounded accent-neu-accent"/>
-        <label class="text-sm font-medium text-neu-fg">Enabled</label>
-      </div>
-      <div class="flex gap-3 pt-2">
-        <button type="submit"
-          class="flex-1 py-3 rounded-2xl bg-neu-accent text-white font-semibold shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-          Save
-        </button>
-        <button type="button" onclick="closeCameraModal()"
-          class="flex-1 py-3 rounded-2xl bg-neu-base shadow-neu-sm text-neu-muted font-medium hover:text-neu-fg hover:-translate-y-px hover:shadow-neu active:translate-y-px active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-          Cancel
-        </button>
-      </div>
-    </form>
-    <p id="camera-error" class="hidden mt-3 px-4 py-2 rounded-xl shadow-neu-inset-sm text-red-500 text-sm text-center"></p>
+{{if not .Cameras}}
+<div class="text-center py-16 px-4">
+  <div class="w-14 h-14 rounded-2xl bg-surface-cont text-on-surface-variant grid place-items-center mx-auto mb-4">
+    <svg class="icon icon-lg" aria-hidden="true"><use href="#i-camera"/></svg>
   </div>
+  <h2 class="text-lg font-semibold mb-1">No cameras yet</h2>
+  {{if $admin}}
+  <p class="text-on-surface-variant mb-4">Add a camera with its RTSP stream address to start live view and recording.</p>
+  <button type="button" class="btn btn-filled" onclick="openAddCamera()">
+    <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add camera
+  </button>
+  {{else}}
+  <p class="text-on-surface-variant">Ask an admin to add one.</p>
+  {{end}}
 </div>
+{{else}}
+<ul class="grid grid-cols-1 medium:grid-cols-2 expanded:grid-cols-3 gap-4" aria-label="Cameras">
+  {{range .Cameras}}
+  <li class="card tile" id="tile-{{.ID}}"
+      data-id="{{.ID}}" data-name="{{.Name}}" data-enabled="{{.Enabled}}"
+      {{if $admin}}data-rtsp="{{.RtspUrl}}"{{end}}
+      data-whep="{{$.WebRTCBase}}/{{.Name}}-preview/whep"
+      data-state="{{if .Enabled}}idle{{else}}off{{end}}">
+    <div class="well">
+      <video class="tile-video" playsinline aria-label="Live view of {{.Name}}"></video>
+
+      <span class="video-chip chip-live left-2.5"><span class="live-dot" aria-hidden="true"></span>Live</span>
+
+      <div class="video-overlay ov-idle">
+        <button type="button" class="btn btn-video" onclick="startStream({{.ID}})" aria-label="Watch {{.Name}} live">
+          <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Watch live
+        </button>
+      </div>
+      <div class="video-overlay ov-connecting" role="status">
+        <span class="spinner spinner-lg" aria-hidden="true"></span>
+        <p>Connecting…</p>
+        <button type="button" class="btn btn-video-ghost" onclick="stopStream({{.ID}}, 'idle')">Cancel</button>
+      </div>
+      <div class="video-overlay ov-error" role="alert">
+        <svg class="icon icon-lg text-[#FFB4AB]" aria-hidden="true"><use href="#i-alert"/></svg>
+        <p class="ov-error-msg">Couldn't start live view. The camera may be offline.</p>
+        <button type="button" class="btn btn-video" onclick="startStream({{.ID}})">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="#i-retry"/></svg>Try again
+        </button>
+      </div>
+      <div class="video-overlay ov-off">
+        <p>Camera is off. Not recording.</p>
+      </div>
+      {{if not .Enabled}}<span class="video-chip right-2.5">Off</span>{{end}}
+
+      <div class="video-controls">
+        <button type="button" class="btn btn-video-icon btn-mute" onclick="toggleMute({{.ID}})" aria-pressed="true" aria-label="Sound" title="Unmute">
+          <svg class="icon" aria-hidden="true"><use href="#i-muted"/></svg>
+        </button>
+        <button type="button" class="btn btn-video-icon" onclick="toggleFullscreen({{.ID}})" aria-label="Full screen" title="Full screen">
+          <svg class="icon" aria-hidden="true"><use href="#i-fullscreen"/></svg>
+        </button>
+        <button type="button" class="btn btn-video-icon" onclick="stopStream({{.ID}}, 'idle')" aria-label="Stop live view" title="Stop live view">
+          <svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1 min-h-14 py-2 pl-4 pr-2">
+      <div class="flex-1 min-w-0">
+        <h2 class="font-semibold truncate" title="{{.Name}}">{{.Name}}</h2>
+        {{if not .Enabled}}<p class="text-xs text-on-surface-variant">Off{{if $admin}} · edit to turn on{{end}}</p>{{end}}
+      </div>
+      {{if $admin}}
+      <button type="button" class="btn btn-icon" onclick="openEditCamera({{.ID}})" aria-label="Edit {{.Name}}" title="Edit">
+        <svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>
+      </button>
+      <button type="button" class="btn btn-icon" onclick="openDeleteCamera({{.ID}})" aria-label="Delete {{.Name}}" title="Delete">
+        <svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>
+      </button>
+      {{end}}
+    </div>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+
+{{if $admin}}
+<!-- Add / edit camera -->
+<dialog id="camera-dialog" class="dialog w-[28rem]" aria-labelledby="camera-dialog-title">
+  <form id="camera-form" class="dialog-body" novalidate>
+    <h2 id="camera-dialog-title" class="dialog-title">Add camera</h2>
+    <input type="hidden" id="camera-id"/>
+    <div class="flex flex-col gap-4 mt-4">
+      <div id="camera-error" class="banner-error hidden" role="alert">
+        <svg class="icon icon-sm mt-0.5" aria-hidden="true"><use href="#i-alert"/></svg><span data-msg></span>
+      </div>
+      <div class="field">
+        <label for="camera-name" class="field-label">Name</label>
+        <input id="camera-name" class="input" type="text" required pattern="[a-z0-9][a-z0-9_\-]{0,62}" maxlength="63"
+               autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="front-door"
+               aria-describedby="camera-name-help"/>
+        <p id="camera-name-help" class="field-help">Lowercase letters, numbers, dashes and underscores. Starts with a letter or number.</p>
+      </div>
+      <div class="field">
+        <label for="camera-rtsp" class="field-label">Stream address (RTSP)</label>
+        <input id="camera-rtsp" class="input" type="url" required pattern="rtsps?://.+"
+               autocomplete="off" autocapitalize="none" spellcheck="false"
+               placeholder="rtsp://user:password@192.168.1.10:554/stream" aria-describedby="camera-rtsp-help"/>
+        <p id="camera-rtsp-help" class="field-help">Find this in your camera's network settings. Starts with rtsp://</p>
+      </div>
+      <!-- Edit only: the create API always enables new cameras. -->
+      <label id="camera-enabled-row" class="flex items-center justify-between gap-4 cursor-pointer" for="camera-enabled">
+        <span>
+          <span class="block font-semibold">Camera on</span>
+          <span class="block field-help">When off, the camera stops recording and live view.</span>
+        </span>
+        <input id="camera-enabled" type="checkbox" role="switch" class="switch" checked/>
+      </label>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-text" onclick="this.closest('dialog').close()">Cancel</button>
+      <button type="submit" class="btn btn-filled">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Delete camera confirmation -->
+<dialog id="delete-dialog" class="dialog w-[28rem]" role="alertdialog" aria-labelledby="delete-title" aria-describedby="delete-body">
+  <div class="dialog-body">
+    <h2 id="delete-title" class="dialog-title">Delete camera?</h2>
+    <p id="delete-body" class="text-on-surface-variant mt-2">Its recordings are removed from the list and live view stops. This can't be undone.</p>
+    <div id="delete-error" class="banner-error hidden mt-4" role="alert">
+      <svg class="icon icon-sm mt-0.5" aria-hidden="true"><use href="#i-alert"/></svg><span data-msg></span>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-text" onclick="this.closest('dialog').close()" autofocus>Cancel</button>
+      <button type="button" class="btn btn-danger" id="delete-confirm">Delete camera</button>
+    </div>
+  </div>
+</dialog>
+{{end}}
 {{end}}
 
 {{define "scripts"}}
 <script>
-// ── WebRTC (WHEP) live stream ─────────────────────────────────────────────────
-// WebRTC carries the cameras' G711 audio, which HLS cannot. Playback is kicked
-// off from the "Watch Live" click (a user gesture), so audio is allowed to play.
-const sessions = {}; // id -> { pc, location }
+// ── Summary line ─────────────────────────────────────────────────────────────
+(() => {
+  const off = document.querySelectorAll('.tile[data-state="off"]').length;
+  if (off) document.getElementById('camera-summary').textContent += ' · ' + off + ' off';
+})();
+
+// ── Live view (WebRTC / WHEP) ────────────────────────────────────────────────
+// WebRTC carries the cameras' G711 audio, which HLS cannot. Playback starts
+// from the "Watch live" click (a user gesture), so audible play is allowed.
+// Tile states: idle → connecting → live, or error. data-state drives the CSS.
+const CONNECT_TIMEOUT_MS = 15000;
+const sessions = {}; // id -> { pc, location, ctrl, timer }
+
+function tile(id) { return document.getElementById('tile-' + id); }
+
+function setState(id, state, errorMsg) {
+  const t = tile(id);
+  t.dataset.state = state;
+  if (state === 'error') {
+    t.querySelector('.ov-error-msg').textContent = errorMsg || "Couldn't start live view. The camera may be offline.";
+  }
+  // Keep focus inside the tile when the button that had it disappears.
+  const focusTarget = {
+    connecting: '.ov-connecting button',
+    error: '.ov-error button',
+    idle: '.ov-idle button',
+    live: '.video-controls button',
+  }[state];
+  if (focusTarget && t.contains(document.activeElement) && document.activeElement.offsetParent === null) {
+    t.querySelector(focusTarget)?.focus();
+  }
+}
 
 async function startStream(id) {
-  const video = document.getElementById('player-' + id);
-  const overlay = document.getElementById('overlay-' + id);
-  if (sessions[id]) return; // already running
+  if (sessions[id]) return;
+  const t = tile(id);
+  const video = t.querySelector('video');
 
   const pc = new RTCPeerConnection();
   pc.addTransceiver('video', { direction: 'recvonly' });
   pc.addTransceiver('audio', { direction: 'recvonly' });
 
-  const stream = new MediaStream();
-  pc.ontrack = (e) => {
-    stream.addTrack(e.track);
-    video.srcObject = stream;
-  };
-  pc.addEventListener('connectionstatechange', () => {
-    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') stopStream(id);
-  });
-
-  const entry = { pc, location: null };
+  const ctrl = new AbortController();
+  const entry = { pc, location: null, ctrl, timer: null };
   sessions[id] = entry;
+  setState(id, 'connecting');
+
+  // Live only once frames actually play; until then the tile says Connecting.
+  entry.timer = setTimeout(() => {
+    if (sessions[id] === entry) stopStream(id, 'error', "Live view didn't start within 15 seconds. The camera may be offline.");
+  }, CONNECT_TIMEOUT_MS);
+
+  const stream = new MediaStream();
+  pc.ontrack = (e) => { stream.addTrack(e.track); video.srcObject = stream; };
+  pc.addEventListener('connectionstatechange', () => {
+    if (sessions[id] !== entry) return;
+    if (pc.connectionState === 'failed') stopStream(id, 'error', 'Live view stopped. The connection to the camera was lost.');
+  });
+  video.onplaying = () => {
+    if (sessions[id] !== entry) return;
+    clearTimeout(entry.timer);
+    setState(id, 'live');
+  };
 
   try {
     await pc.setLocalDescription(await pc.createOffer());
     await waitIceGathering(pc);
-
-    const res = await fetch(video.dataset.whep, {
+    const res = await fetch(t.dataset.whep, {
       method: 'POST',
       headers: { 'Content-Type': 'application/sdp' },
       body: pc.localDescription.sdp,
+      signal: ctrl.signal,
     });
     if (!res.ok) throw new Error('WHEP ' + res.status);
-
     entry.location = res.headers.get('Location');
     await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
   } catch (err) {
-    console.error('live stream failed', err);
-    stopStream(id);
+    if (sessions[id] !== entry) return; // cancelled or timed out meanwhile
+    console.error('live view failed', err);
+    stopStream(id, 'error');
     return;
   }
+  if (sessions[id] !== entry) return;
 
-  if (overlay) overlay.classList.add('hidden');
-
-  // We're inside the click gesture, so try to play with sound first.
+  // Inside the click gesture: try audible first, fall back to muted.
   video.muted = false;
-  video.play().catch(() => {
-    // Browser refused audible autoplay — fall back to muted + an unmute button.
+  video.play().then(() => syncMute(id)).catch(() => {
     video.muted = true;
+    syncMute(id);
     video.play().catch(() => {});
-    showUnmute(id);
   });
 }
 
-function stopStream(id) {
+// stopStream tears down the session and moves the tile to nextState.
+function stopStream(id, nextState, errorMsg) {
   const entry = sessions[id];
-  if (!entry) return;
-  delete sessions[id];
-  try { entry.pc.close(); } catch (_) {}
-  if (entry.location) {
+  if (entry) {
+    delete sessions[id];
+    clearTimeout(entry.timer);
+    entry.ctrl.abort();
+    try { entry.pc.close(); } catch (_) {}
     // Best-effort session teardown on mediamtx.
-    fetch(entry.location, { method: 'DELETE', keepalive: true }).catch(() => {});
+    if (entry.location) fetch(entry.location, { method: 'DELETE', keepalive: true }).catch(() => {});
   }
+  const t = tile(id);
+  if (!t) return;
+  const video = t.querySelector('video');
+  video.onplaying = null;
+  video.srcObject = null;
+  if (document.fullscreenElement && t.contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {});
+  setState(id, nextState || 'idle', errorMsg);
 }
 
 // Non-trickle ICE: resolve once gathering completes (host candidates on a LAN
@@ -240,69 +289,138 @@ function waitIceGathering(pc) {
   });
 }
 
-function showUnmute(id) {
-  const video = document.getElementById('player-' + id);
-  const wrap = video.parentElement;
-  if (wrap.querySelector('.unmute-btn')) return;
-  const btn = document.createElement('button');
-  btn.className = 'unmute-btn absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-neu-base shadow-neu-sm text-neu-accent text-xs font-semibold z-10';
-  btn.textContent = '🔊 Unmute';
-  btn.onclick = () => { video.muted = false; video.play().catch(() => {}); btn.remove(); };
-  wrap.appendChild(btn);
+function syncMute(id) {
+  const t = tile(id);
+  const muted = t.querySelector('video').muted;
+  const btn = t.querySelector('.btn-mute');
+  btn.setAttribute('aria-pressed', String(!muted));
+  btn.title = muted ? 'Unmute' : 'Mute';
+  btn.querySelector('use').setAttribute('href', muted ? '#i-muted' : '#i-volume');
 }
 
-window.addEventListener('pagehide', () => Object.keys(sessions).forEach(stopStream));
-
-// ── Camera CRUD ──────────────────────────────────────────────────────────────
-function openAddCamera() {
-  document.getElementById('camera-modal-title').textContent = 'Add Camera';
-  document.getElementById('camera-id').value = '';
-  document.getElementById('camera-name').value = '';
-  document.getElementById('camera-rtsp').value = '';
-  document.getElementById('camera-enabled').checked = true;
-  document.getElementById('camera-error').classList.add('hidden');
-  document.getElementById('camera-modal').classList.remove('hidden');
+function toggleMute(id) {
+  const video = tile(id).querySelector('video');
+  video.muted = !video.muted;
+  if (!video.muted) video.play().catch(() => {});
+  syncMute(id);
 }
 
-function editCamera(id, name, rtsp, enabled) {
-  document.getElementById('camera-modal-title').textContent = 'Edit Camera';
+function toggleFullscreen(id) {
+  const well = tile(id).querySelector('.well');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else well.requestFullscreen?.().catch(() => {});
+}
+
+window.addEventListener('pagehide', () => Object.keys(sessions).forEach(id => stopStream(id)));
+</script>
+
+{{if eq .Claims.Role "admin"}}
+<script>
+// ── Camera add / edit / delete ───────────────────────────────────────────────
+const camDlg = document.getElementById('camera-dialog');
+const camForm = document.getElementById('camera-form');
+const camErr = document.getElementById('camera-error');
+
+function fillCameraForm(title, id, name, rtsp, enabled) {
+  document.getElementById('camera-dialog-title').textContent = title;
   document.getElementById('camera-id').value = id;
   document.getElementById('camera-name').value = name;
   document.getElementById('camera-rtsp').value = rtsp;
   document.getElementById('camera-enabled').checked = enabled;
-  document.getElementById('camera-error').classList.add('hidden');
-  document.getElementById('camera-modal').classList.remove('hidden');
+  document.getElementById('camera-enabled-row').classList.toggle('hidden', !id);
+  camErr.classList.add('hidden');
+  camForm.querySelectorAll('.input').forEach(el => el.removeAttribute('aria-invalid'));
+  camForm.querySelectorAll('.field-error').forEach(el => el.remove());
+  camDlg.showModal();
 }
 
-function closeCameraModal() {
-  document.getElementById('camera-modal').classList.add('hidden');
+function openAddCamera() { fillCameraForm('Add camera', '', '', '', true); }
+
+function openEditCamera(id) {
+  const t = tile(id);
+  fillCameraForm('Edit camera', id, t.dataset.name, t.dataset.rtsp, t.dataset.enabled === 'true');
 }
 
-document.getElementById('camera-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const id = document.getElementById('camera-id').value;
-  const body = {
-    name: document.getElementById('camera-name').value,
-    rtsp_url: document.getElementById('camera-rtsp').value,
-    enabled: document.getElementById('camera-enabled').checked,
-  };
-  const method = id ? 'PUT' : 'POST';
-  const url = id ? '/api/cameras/' + id : '/api/cameras';
-  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) {
-    const j = await res.json();
-    const el = document.getElementById('camera-error');
-    el.textContent = j.error || 'Request failed';
-    el.classList.remove('hidden');
-    return;
-  }
-  location.reload();
+const fieldMessages = {
+  'camera-name': { valueMissing: 'Enter a name.', patternMismatch: 'Use lowercase letters, numbers, dashes or underscores, starting with a letter or number. Example: front-door' },
+  'camera-rtsp': { valueMissing: 'Enter the stream address.', typeMismatch: 'Enter a full address that starts with rtsp://', patternMismatch: 'The address must start with rtsp:// or rtsps://' },
+};
+
+// validateField shows or clears the inline error for one input.
+function validateField(input) {
+  const field = input.closest('.field');
+  field.querySelector('.field-error')?.remove();
+  if (input.checkValidity()) { input.removeAttribute('aria-invalid'); return true; }
+  const v = input.validity;
+  const msgs = fieldMessages[input.id];
+  const msg = (v.valueMissing && msgs.valueMissing) || (v.typeMismatch && msgs.typeMismatch) || (v.patternMismatch && msgs.patternMismatch) || input.validationMessage;
+  input.setAttribute('aria-invalid', 'true');
+  const p = document.createElement('p');
+  p.className = 'field-error';
+  p.id = input.id + '-error';
+  p.innerHTML = '<svg class="icon icon-sm" aria-hidden="true"><use href="#i-alert"/></svg>';
+  p.append(msg);
+  field.appendChild(p);
+  input.setAttribute('aria-describedby', input.id + '-help ' + p.id);
+  return false;
+}
+
+// Validate on blur; once a field has errored, re-validate on each keystroke.
+camForm.querySelectorAll('.input').forEach(input => {
+  input.addEventListener('blur', () => { if (input.value) validateField(input); });
+  input.addEventListener('input', () => { if (input.getAttribute('aria-invalid') === 'true') validateField(input); });
 });
 
-async function deleteCamera(id) {
-  if (!confirm('Delete this camera and its recordings index?')) return;
-  const res = await fetch('/api/cameras/' + id, { method: 'DELETE' });
-  if (res.ok) location.reload();
+camForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  camErr.classList.add('hidden');
+  const inputs = [...camForm.querySelectorAll('.input')];
+  const bad = inputs.filter(i => !validateField(i));
+  if (bad.length) { bad[0].focus(); return; }
+
+  const id = document.getElementById('camera-id').value;
+  const btn = camForm.querySelector('[type=submit]');
+  setBusy(btn, true, 'Saving…');
+  try {
+    const res = await fetch(id ? '/api/cameras/' + id : '/api/cameras', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('camera-name').value.trim(),
+        rtsp_url: document.getElementById('camera-rtsp').value.trim(),
+        enabled: document.getElementById('camera-enabled').checked,
+      }),
+    });
+    if (!res.ok) throw new Error(await apiError(res));
+    location.reload();
+  } catch (ex) {
+    setBusy(btn, false);
+    showError(camErr, "Couldn't save the camera. " + ex.message);
+  }
+});
+
+// Delete: irreversible (recordings rows cascade), so it gets a confirmation.
+let deleteId = null;
+function openDeleteCamera(id) {
+  deleteId = id;
+  document.getElementById('delete-title').textContent = 'Delete camera “' + tile(id).dataset.name + '”?';
+  document.getElementById('delete-error').classList.add('hidden');
+  document.getElementById('delete-dialog').showModal();
 }
+
+document.getElementById('delete-confirm').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  setBusy(btn, true, 'Deleting…');
+  try {
+    if (sessions[deleteId]) stopStream(deleteId, 'idle');
+    const res = await fetch('/api/cameras/' + deleteId, { method: 'DELETE' });
+    if (!res.ok) throw new Error(await apiError(res));
+    location.reload();
+  } catch (ex) {
+    setBusy(btn, false);
+    showError(document.getElementById('delete-error'), "Couldn't delete the camera. " + ex.message);
+  }
+});
 </script>
+{{end}}
 {{end}}

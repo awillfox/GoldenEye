@@ -2,9 +2,297 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design tokens ──────────────────────────────────────────────────────────
+   Color roles hold RGB channels (see tailwind.config.js). Every fill role has a
+   matching on-* role for content placed on it. Contrast for every text/fill
+   pair was computed (WCAG 2.x) and passes AA in both schemes. */
 @layer base {
-  html {
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-    scroll-behavior: smooth;
+  :root {
+    color-scheme: light dark;
+
+    --surface: 246 247 249;
+    --surface-low: 255 255 255;
+    --surface-cont: 238 240 243;
+    --surface-high: 227 230 235;
+    --on-surface: 21 24 29;
+    --on-surface-variant: 74 82 96;
+    --outline: 118 127 140;
+    --outline-variant: 211 216 223;
+    --primary: 79 70 229;
+    --on-primary: 255 255 255;
+    --primary-cont: 228 226 255;
+    --on-primary-cont: 31 26 107;
+    --error: 180 35 24;
+    --on-error: 255 255 255;
+    --error-cont: 253 231 228;
+    --on-error-cont: 106 18 9;
+    --scrim: 0 0 0 / 0.32;
+    --elev-1: 0 1px 2px rgb(16 18 22 / 0.06), 0 4px 12px rgb(16 18 22 / 0.06);
+    --elev-3: 0 12px 32px rgb(16 18 22 / 0.18);
+
+    /* Motion: easing + duration tokens. Small utility transitions only. */
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+    --dur-short: 150ms;
+    --dur-medium: 250ms;
+
+    /* Shape */
+    --r-xs: 4px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-xl: 28px;
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: 16 18 22;
+      --surface-low: 22 25 30;
+      --surface-cont: 28 32 38;
+      --surface-high: 38 43 51;
+      --on-surface: 231 233 238;
+      --on-surface-variant: 164 172 184;
+      --outline: 124 133 148;
+      --outline-variant: 47 53 62;
+      --primary: 180 174 255;
+      --on-primary: 30 26 92;
+      --primary-cont: 47 42 122;
+      --on-primary-cont: 228 226 255;
+      --error: 255 180 171;
+      --on-error: 105 0 5;
+      --error-cont: 140 29 24;
+      --on-error-cont: 255 218 214;
+      --scrim: 0 0 0 / 0.6;
+      --elev-1: none;
+      --elev-3: 0 12px 32px rgb(0 0 0 / 0.5);
+    }
+  }
+
+  html {
+    font-family: system-ui, ui-sans-serif, sans-serif;
+    background: rgb(var(--surface));
+    color: rgb(var(--on-surface));
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { font-size: 0.875rem; line-height: 1.25rem; }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 2px;
+  }
+  /* Sticky app bar is 64px; keep focused elements clear of it (WCAG 2.4.11). */
+  html { scroll-padding-top: 80px; scroll-padding-bottom: 96px; }
+}
+
+/* ── Components ─────────────────────────────────────────────────────────── */
+@layer components {
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .icon {
+    width: 1.25rem; height: 1.25rem; flex: none;
+    fill: none; stroke: currentColor; stroke-width: 1.75;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .icon-sm { width: 1rem; height: 1rem; }
+  .icon-lg { width: 1.75rem; height: 1.75rem; }
+
+  /* Buttons: filled > tonal > outlined > text. 40px visual, pill shape.
+     State layer = on-color overlay (hover 8%, pressed 10%). */
+  .btn {
+    position: relative; isolation: isolate;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 2.5rem; padding: 0 1rem; border-radius: 9999px;
+    font-weight: 600; white-space: nowrap; cursor: pointer;
+    transition: background-color var(--dur-short) var(--ease-standard),
+                color var(--dur-short) var(--ease-standard);
+  }
+  .btn::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1;
+    background: currentColor; opacity: 0;
+    transition: opacity var(--dur-short) var(--ease-standard);
+  }
+  .btn:hover::before { opacity: 0.08; }
+  .btn:active::before { opacity: 0.1; }
+  .btn:disabled, .btn[aria-disabled="true"] { cursor: default; }
+  .btn:disabled::before { opacity: 0; }
+  .btn:disabled:not([aria-busy="true"]) { opacity: 0.38; }
+
+  .btn-filled   { background: rgb(var(--primary)); color: rgb(var(--on-primary)); }
+  .btn-tonal    { background: rgb(var(--primary-cont)); color: rgb(var(--on-primary-cont)); }
+  .btn-outlined { color: rgb(var(--on-surface)); border: 1px solid rgb(var(--outline)); }
+  .btn-text     { color: rgb(var(--primary)); padding: 0 0.75rem; }
+  .btn-danger   { background: rgb(var(--error)); color: rgb(var(--on-error)); }
+  .btn-icon     { width: 2.5rem; padding: 0; color: rgb(var(--on-surface-variant)); }
+  .btn-icon:hover { color: rgb(var(--on-surface)); }
+
+  /* Buttons drawn over video always sit on black, independent of scheme. */
+  .btn-video { background: #fff; color: #111; }
+  .btn-video-ghost { background: rgb(255 255 255 / 0.14); color: #fff; }
+  .btn-video-icon { width: 2.5rem; padding: 0; color: #fff; background: rgb(0 0 0 / 0.45); }
+
+  .spinner {
+    width: 1rem; height: 1rem; border-radius: 9999px; flex: none;
+    border: 2px solid currentColor; border-right-color: transparent;
+    animation: spin 0.8s linear infinite;
+  }
+  .spinner-lg { width: 1.75rem; height: 1.75rem; border-width: 3px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Fields */
+  .field { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
+  .field-label { font-size: 0.8125rem; font-weight: 600; color: rgb(var(--on-surface)); }
+  .field-help { font-size: 0.75rem; line-height: 1rem; color: rgb(var(--on-surface-variant)); }
+  .field-error { font-size: 0.75rem; line-height: 1rem; font-weight: 500; color: rgb(var(--error)); display: flex; gap: 0.375rem; align-items: center; }
+  .input {
+    width: 100%; min-height: 2.75rem; padding: 0 0.75rem;
+    font-size: 1rem; /* >= 16px prevents mobile auto-zoom */
+    color: rgb(var(--on-surface)); background: rgb(var(--surface-low));
+    border: 1px solid rgb(var(--outline)); border-radius: var(--r-sm);
+  }
+  .input:focus-visible { outline: none; border-color: rgb(var(--primary)); box-shadow: inset 0 0 0 1px rgb(var(--primary)); }
+  .input[aria-invalid="true"] { border-color: rgb(var(--error)); box-shadow: inset 0 0 0 1px rgb(var(--error)); }
+  select.input { appearance: none; padding-right: 2.5rem; cursor: pointer; }
+  .select-wrap { position: relative; }
+  .select-wrap .icon { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: rgb(var(--on-surface-variant)); }
+
+  /* Switch: native checkbox with role="switch". */
+  .switch {
+    appearance: none; position: relative; flex: none; cursor: pointer;
+    width: 3.25rem; height: 2rem; border-radius: 9999px;
+    background: rgb(var(--surface-high)); border: 2px solid rgb(var(--outline));
+    transition: background-color var(--dur-short) var(--ease-standard);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 50%; left: 0.375rem; transform: translateY(-50%);
+    width: 1rem; height: 1rem; border-radius: 9999px; background: rgb(var(--outline));
+    transition: left var(--dur-short) var(--ease-standard), width var(--dur-short) var(--ease-standard), height var(--dur-short) var(--ease-standard);
+  }
+  .switch:checked { background: rgb(var(--primary)); border-color: rgb(var(--primary)); }
+  .switch:checked::after { left: 1.5rem; width: 1.5rem; height: 1.5rem; background: rgb(var(--on-primary)); }
+
+  .banner-error {
+    display: flex; gap: 0.625rem; align-items: flex-start;
+    padding: 0.625rem 0.75rem; border-radius: var(--r-sm);
+    background: rgb(var(--error-cont)); color: rgb(var(--on-error-cont));
+    font-size: 0.8125rem;
+  }
+
+  /* Cards */
+  .card {
+    background: rgb(var(--surface-low)); border: 1px solid rgb(var(--outline-variant));
+    border-radius: var(--r-md); overflow: hidden; box-shadow: var(--elev-1);
+  }
+  .well { position: relative; aspect-ratio: 16 / 9; background: #000; color: #fff; overflow: hidden; }
+  .well video, .well img { width: 100%; height: 100%; object-fit: contain; }
+  .well img { object-fit: cover; }
+  .well:fullscreen video { object-fit: contain; }
+
+  .video-overlay {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+    padding: 1rem; text-align: center; background: rgb(0 0 0 / 0.7); color: #fff;
+  }
+  .video-overlay p { max-width: 16rem; font-size: 0.8125rem; }
+  .video-chip {
+    position: absolute; top: 0.625rem; display: inline-flex; align-items: center; gap: 0.375rem;
+    height: 1.5rem; padding: 0 0.5rem; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600; background: rgb(0 0 0 / 0.65); color: #fff;
+  }
+  .live-dot { width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: #FF5B4F; }
+  .video-controls {
+    position: absolute; left: 0; right: 0; bottom: 0; display: none; gap: 0.25rem; justify-content: flex-end;
+    padding: 0.5rem; background: linear-gradient(transparent, rgb(0 0 0 / 0.6));
+  }
+
+  /* Camera tile state machine: data-state on .tile picks the visible layer. */
+  .tile[data-state="idle"]       .ov-idle,
+  .tile[data-state="connecting"] .ov-connecting,
+  .tile[data-state="error"]      .ov-error,
+  .tile[data-state="off"]        .ov-off { display: flex; }
+  .tile[data-state="live"] .video-controls,
+  .tile[data-state="live"] .chip-live { display: flex; }
+  .tile .chip-live { display: none; }
+
+  /* Segmented control */
+  .segmented { display: inline-flex; border: 1px solid rgb(var(--outline)); border-radius: 9999px; overflow: hidden; }
+  .segmented button {
+    display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2.5rem; padding: 0 1rem;
+    font-weight: 600; color: rgb(var(--on-surface));
+    transition: background-color var(--dur-short) var(--ease-standard);
+  }
+  .segmented button + button { border-left: 1px solid rgb(var(--outline)); }
+  .segmented button:hover { background: rgb(var(--on-surface) / 0.08); }
+  .segmented button[aria-pressed="true"] { background: rgb(var(--primary-cont)); color: rgb(var(--on-primary-cont)); }
+  .segmented button:focus-visible { outline-offset: -3px; }
+
+  /* Navigation */
+  .nav-tab {
+    display: flex; align-items: center; gap: 0.5rem; height: 100%; padding: 0 1rem;
+    font-weight: 500; color: rgb(var(--on-surface-variant));
+    border-bottom: 3px solid transparent; border-top: 3px solid transparent;
+  }
+  .nav-tab:hover { color: rgb(var(--on-surface)); }
+  .nav-tab[aria-current="page"] { color: rgb(var(--on-surface)); font-weight: 600; border-bottom-color: rgb(var(--primary)); }
+  .nav-tab[aria-current="page"] .icon { color: rgb(var(--primary)); }
+  .nav-tab:focus-visible { outline-offset: -4px; }
+
+  .navbar-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem;
+    min-height: 4rem; font-size: 0.75rem; font-weight: 500; color: rgb(var(--on-surface-variant));
+  }
+  .navbar-item .pill { width: 4rem; height: 2rem; border-radius: 9999px; display: grid; place-items: center; }
+  .navbar-item[aria-current="page"] { color: rgb(var(--on-surface)); font-weight: 700; }
+  .navbar-item[aria-current="page"] .pill { background: rgb(var(--primary-cont)); color: rgb(var(--on-primary-cont)); }
+
+  /* Dialog: native <dialog>. Inner .dialog-body holds padding so a click on
+     the <dialog> element itself means a click on the backdrop. */
+  dialog.dialog {
+    padding: 0; border: 0; border-radius: var(--r-xl); max-width: calc(100vw - 2rem);
+    background: rgb(var(--surface-cont)); color: rgb(var(--on-surface)); box-shadow: var(--elev-3);
+  }
+  dialog.dialog::backdrop { background: rgb(var(--scrim)); }
+  dialog.dialog[open] { animation: dialog-in var(--dur-short) var(--ease-decelerate); }
+  dialog.dialog[open]::backdrop { animation: fade-in var(--dur-short) var(--ease-decelerate); }
+  .dialog-body { padding: 1.5rem; }
+  .dialog-title { font-size: 1.375rem; line-height: 1.75rem; font-weight: 600; }
+  .dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+  @keyframes dialog-in { from { opacity: 0; transform: scale(0.97); } }
+  @keyframes fade-in { from { opacity: 0; } }
+
+  /* Snackbar (inverse surface) */
+  .snackbar {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 60;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 2rem); padding: 0.75rem 1rem; border-radius: var(--r-xs);
+    background: rgb(var(--on-surface)); color: rgb(var(--surface)); font-weight: 500;
+  }
+
+  .skeleton { background: rgb(var(--surface-cont)); border-radius: var(--r-xs); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.55; } }
+
+  /* Timeline */
+  .tl-track {
+    position: relative; height: 2.25rem; border-radius: 6px; cursor: pointer; touch-action: none;
+    background: rgb(var(--surface-cont)); border: 1px solid rgb(var(--outline-variant));
+  }
+  .tl-hour { position: absolute; top: 0; bottom: 0; width: 1px; background: rgb(var(--outline-variant)); }
+  .tl-seg { position: absolute; top: 5px; bottom: 5px; border-radius: 3px; background: rgb(var(--primary) / 0.85); }
+  .tl-head {
+    position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; display: none;
+    background: rgb(var(--error)); pointer-events: none;
+  }
+  .tl-head::before { content: ""; position: absolute; top: -2px; left: -5px; width: 12px; height: 12px; border-radius: 9999px; background: rgb(var(--error)); }
+  .tl-tip {
+    position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap;
+    padding: 0 0.5rem; border-radius: var(--r-xs); font-size: 0.75rem; line-height: 1.25rem;
+    background: rgb(var(--on-surface)); color: rgb(var(--surface)); z-index: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; }
+  dialog.dialog[open], dialog.dialog[open]::backdrop { animation: none; }
+  .skeleton { animation: none; }
+  /* Spinner keeps rotating slowly: it is the only progress signal besides its text label. */
+  .spinner { animation-duration: 1.6s; }
 }

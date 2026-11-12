@@ -1,414 +1,443 @@
 {{template "base" .}}
 
-{{define "title"}} — Recordings{{end}}
+{{define "title"}}Recordings{{end}}
 
 {{define "content"}}
-<div class="max-w-7xl mx-auto">
-
-  <!-- Header -->
-  <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
-    <div>
-      <h2 class="font-display font-bold text-2xl text-neu-fg">Recordings</h2>
-      <p class="text-neu-muted text-sm mt-0.5">Browse and replay recorded footage</p>
-    </div>
-    <!-- View toggle -->
-    <div class="flex gap-1 bg-neu-base shadow-neu-inset rounded-2xl p-1">
-      <button id="btn-grid" onclick="setView('grid')"
-        class="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-        Grid
-      </button>
-      <button id="btn-timeline" onclick="setView('timeline')"
-        class="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-        Timeline
-      </button>
-    </div>
+<div class="flex items-end justify-between gap-4 flex-wrap mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold">Recordings</h1>
+    <p class="text-on-surface-variant mt-0.5">Pick a camera and day to replay footage.</p>
   </div>
-
-  <!-- Filter card -->
-  <div class="bg-neu-base shadow-neu rounded-[32px] p-6 mb-8">
-    <div class="flex flex-wrap gap-4 items-end">
-      <div class="flex-1 min-w-40">
-        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Camera</label>
-        <div class="relative">
-          <select id="filter-camera"
-            class="appearance-none w-full px-4 py-3 pr-10 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300">
-            <option value="">All Cameras</option>
-            {{range .Cameras}}
-            <option value="{{.ID}}">{{.Name}}</option>
-            {{end}}
-          </select>
-          <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-            <svg class="w-4 h-4 text-neu-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="flex-1 min-w-40">
-        <label class="block text-xs font-semibold text-neu-muted mb-2 uppercase tracking-wider">Date</label>
-        <input id="filter-date" type="date"
-          class="w-full px-4 py-3 rounded-2xl bg-neu-base shadow-neu-inset text-neu-fg focus:outline-none focus:shadow-neu-inset-deep focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base transition-all duration-300"/>
-      </div>
-      <button onclick="loadRecordings()"
-        class="flex-shrink-0 px-6 py-3 rounded-2xl bg-neu-accent text-white font-display font-semibold text-sm shadow-neu-accent hover:shadow-neu-accent-hover hover:-translate-y-px active:translate-y-px active:shadow-neu-accent-press transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent focus:ring-offset-2 focus:ring-offset-neu-base">
-        Search
-      </button>
-    </div>
-  </div>
-
-  <!-- Results -->
-  <div id="recordings-list">
-    <p class="text-center text-neu-muted py-12 text-sm">Select a camera or date and click Search.</p>
-  </div>
-
-</div>
-
-<!-- Playback modal -->
-<div id="play-modal" class="hidden fixed inset-0 bg-neu-fg/10 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-  <div class="bg-neu-base shadow-neu-modal rounded-[32px] overflow-hidden w-full max-w-3xl">
-    <div class="flex items-center justify-between px-6 py-4">
-      <span id="play-title" class="font-display font-semibold text-neu-fg truncate"></span>
-      <button onclick="closePlay()"
-        class="w-9 h-9 rounded-xl bg-neu-base shadow-neu-sm flex items-center justify-center text-neu-muted hover:text-neu-fg hover:shadow-neu active:shadow-neu-inset-sm transition-all duration-300 flex-shrink-0 ml-4 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-    <div class="shadow-neu-inset-deep mx-4 mb-4 rounded-2xl overflow-hidden bg-[#1a1f26]">
-      <video id="play-video" controls class="w-full max-h-[65vh]"></video>
-    </div>
+  <div class="segmented" role="group" aria-label="View">
+    <button type="button" id="view-grid" aria-pressed="true" onclick="setView('grid')">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-grid"/></svg>Grid
+    </button>
+    <button type="button" id="view-timeline" aria-pressed="false" onclick="setView('timeline')">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-timeline"/></svg>Timeline
+    </button>
   </div>
 </div>
+
+<div class="flex flex-col medium:flex-row medium:flex-wrap medium:items-end gap-4 mb-4">
+  <div class="field medium:w-56">
+    <label for="filter-camera" class="field-label">Camera</label>
+    <div class="select-wrap">
+      <select id="filter-camera" class="input">
+        <option value="">All cameras</option>
+        {{range .Cameras}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </div>
+  </div>
+  <div class="field">
+    <label for="filter-date" class="field-label">Day</label>
+    <div class="flex items-center gap-1">
+      <button type="button" class="btn btn-icon" id="day-prev" onclick="shiftDay(-1)" aria-label="Previous day" title="Previous day">
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-left"/></svg>
+      </button>
+      <input id="filter-date" type="date" class="input tnum flex-1 medium:w-48"/>
+      <button type="button" class="btn btn-icon" id="day-next" onclick="shiftDay(1)" aria-label="Next day" title="Next day">
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg>
+      </button>
+    </div>
+  </div>
+  <p id="result-count" class="medium:ml-auto medium:self-center text-on-surface-variant tnum" role="status" aria-live="polite"></p>
+</div>
+
+<div id="results" aria-busy="false"></div>
+
+<!-- Timeline player (timeline view only) -->
+<section id="tl-player" class="hidden mt-4 grid grid-cols-1 expanded:grid-cols-[1fr_17.5rem] gap-4" aria-label="Player">
+  <div class="card">
+    <div class="well"><video id="tl-video" controls playsinline class="w-full h-full"></video></div>
+  </div>
+  <aside class="card p-4 self-start">
+    <div class="flex items-center justify-between">
+      <h2 class="font-semibold">Now playing</h2>
+      <button type="button" class="btn btn-icon -mr-2" onclick="closeTlPlayer()" aria-label="Close player" title="Close player">
+        <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <dl class="tnum mt-1">
+      <dt class="text-xs text-on-surface-variant mt-2.5">Camera</dt><dd id="tl-cam" class="font-semibold"></dd>
+      <dt class="text-xs text-on-surface-variant mt-2.5">Time</dt><dd id="tl-time" class="font-semibold"></dd>
+      <dt class="text-xs text-on-surface-variant mt-2.5">Segment</dt><dd id="tl-seg" class="font-semibold"></dd>
+    </dl>
+    <div class="flex gap-2 mt-4">
+      <button type="button" id="tl-prev" class="btn btn-outlined flex-1" onclick="stepSegment(-1)">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-left"/></svg>Previous
+      </button>
+      <button type="button" id="tl-next" class="btn btn-outlined flex-1" onclick="stepSegment(1)">
+        Next<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg>
+      </button>
+    </div>
+  </aside>
+</section>
+
+<!-- Grid player -->
+<dialog id="play-dialog" class="dialog w-[60rem]" aria-labelledby="play-title">
+  <div class="flex items-center justify-between gap-4 pl-6 pr-3 py-3">
+    <h2 id="play-title" class="font-semibold truncate tnum"></h2>
+    <button type="button" class="btn btn-icon" onclick="this.closest('dialog').close()" aria-label="Close player" title="Close">
+      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+  </div>
+  <div class="well"><video id="play-video" controls playsinline class="w-full h-full"></video></div>
+</dialog>
 {{end}}
 
 {{define "scripts"}}
 <script>
-const _camNames = {
-  {{range .Cameras}}{{.ID}}: "{{.Name}}",
-  {{end}}
-};
+const PAGE_LIMIT = 200;
+const DAY_SECS = 86400;
+const DEFAULT_SEG_SECS = 300; // used when a recording has no duration yet
 
-let _currentView = 'grid';
-let _currentItems = [];
+const camNames = {};
+document.querySelectorAll('#filter-camera option[value]').forEach(o => { if (o.value) camNames[o.value] = o.textContent; });
+const camName = id => camNames[id] || 'Unknown camera';
 
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
-  setView('grid');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const dateInput = document.getElementById('filter-date');
+const camSelect = document.getElementById('filter-camera');
+const results = document.getElementById('results');
+const countEl = document.getElementById('result-count');
+
+let view = localStorage.getItem('ge.recordings.view') === 'timeline' ? 'timeline' : 'grid';
+let items = [];
+let loadSeq = 0;
+
+// ── Dates (local time) ───────────────────────────────────────────────────────
+function localISODate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function dayStart() { return new Date(dateInput.value + 'T00:00:00'); }
+function fmtClock(d, withSecs) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: withSecs ? '2-digit' : undefined, hour12: false });
+}
+function fmtSecInDay(sec, withSecs) {
+  return fmtClock(new Date(dayStart().getTime() + sec * 1000), withSecs);
+}
+function fmtDuration(secs) {
+  if (!secs) return '—';
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return h ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') : m + ':' + String(s).padStart(2, '0');
+}
+function fmtSize(bytes) {
+  if (!bytes) return '—';
+  const mb = bytes / 1024 / 1024;
+  return mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : mb.toFixed(0) + ' MB';
+}
+function recStart(r) { return new Date(r.started_at); }
+function recDur(r) { return r.duration_secs || DEFAULT_SEG_SECS; }
+function recRange(r) {
+  const s = recStart(r);
+  return fmtClock(s) + ' – ' + fmtClock(new Date(s.getTime() + recDur(r) * 1000));
+}
+
+function shiftDay(delta) {
+  const d = dayStart();
+  d.setDate(d.getDate() + delta);
+  dateInput.value = localISODate(d);
   loadRecordings();
-});
+}
 
+// ── View switch ──────────────────────────────────────────────────────────────
 function setView(v) {
-  _currentView = v;
-  const btnGrid = document.getElementById('btn-grid');
-  const btnTL   = document.getElementById('btn-timeline');
-  if (v === 'grid') {
-    btnGrid.className = 'px-4 py-2 rounded-xl text-sm font-semibold bg-neu-base shadow-neu text-neu-accent transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent';
-    btnTL.className   = 'px-4 py-2 rounded-xl text-sm font-semibold text-neu-muted transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent';
-  } else {
-    btnTL.className   = 'px-4 py-2 rounded-xl text-sm font-semibold bg-neu-base shadow-neu text-neu-accent transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent';
-    btnGrid.className = 'px-4 py-2 rounded-xl text-sm font-semibold text-neu-muted transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent';
-  }
-  if (_currentItems.length > 0) renderItems(_currentItems);
+  view = v;
+  localStorage.setItem('ge.recordings.view', v);
+  document.getElementById('view-grid').setAttribute('aria-pressed', String(v === 'grid'));
+  document.getElementById('view-timeline').setAttribute('aria-pressed', String(v === 'timeline'));
+  if (v === 'grid') closeTlPlayer();
+  if (items.length) render();
 }
 
+// ── Loading ──────────────────────────────────────────────────────────────────
 async function loadRecordings() {
-  const camID = document.getElementById('filter-camera').value;
-  const date  = document.getElementById('filter-date').value;
-  if (!camID && !date) {
-    document.getElementById('recordings-list').innerHTML =
-      '<p class="text-center text-neu-accent py-12 text-sm font-medium">Select at least a camera or date.</p>';
+  if (!dateInput.value) dateInput.value = localISODate(new Date());
+  const date = dateInput.value;
+  const today = localISODate(new Date());
+  document.getElementById('day-next').disabled = date >= today;
+
+  const seq = ++loadSeq;
+  closeTlPlayer();
+  renderLoading();
+
+  let url = '/api/recordings?limit=' + PAGE_LIMIT + '&offset=0';
+  if (camSelect.value) url += '&camera_id=' + encodeURIComponent(camSelect.value);
+  url += '&from=' + date + 'T00:00:00&to=' + date + 'T23:59:59';
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(await apiError(res));
+    const data = await res.json();
+    if (seq !== loadSeq) return; // a newer request superseded this one
+    items = (data || []).slice().sort((a, b) => recStart(a) - recStart(b));
+  } catch (e) {
+    if (seq !== loadSeq) return;
+    items = [];
+    renderError(e.message);
     return;
   }
+  results.setAttribute('aria-busy', 'false');
 
-  let url = '/api/recordings?limit=200&offset=0';
-  if (camID) url += '&camera_id=' + camID;
-  if (date) {
-    url += '&from=' + date + 'T00:00:00&to=' + date + 'T23:59:59';
-  }
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    document.getElementById('recordings-list').innerHTML =
-      '<p class="text-center text-red-500 py-12 text-sm">Error loading recordings.</p>';
-    return;
-  }
-
-  const items = await res.json();
-  _currentItems = items || [];
-  if (_currentItems.length === 0) {
-    document.getElementById('recordings-list').innerHTML =
-      '<p class="text-center text-neu-muted py-12 text-sm">No recordings found.</p>';
-    return;
-  }
-  renderItems(_currentItems);
+  if (!items.length) { renderEmpty(date === today); return; }
+  const total = items.reduce((n, r) => n + (r.size_bytes || 0), 0);
+  countEl.textContent = (items.length >= PAGE_LIMIT ? 'First ' + PAGE_LIMIT + ' recordings shown' : items.length + ' recording' + (items.length === 1 ? '' : 's')) + ' · ' + fmtSize(total);
+  render();
 }
 
-function renderItems(items) {
-  if (_currentView === 'timeline') {
-    renderTimeline(items);
-  } else {
-    renderGrid(items);
-  }
+function render() { view === 'timeline' ? renderTimeline() : renderGrid(); }
+
+function renderLoading() {
+  results.setAttribute('aria-busy', 'true');
+  countEl.textContent = 'Loading recordings…';
+  const card = `<li class="card" aria-hidden="true"><div class="aspect-video skeleton rounded-none"></div>
+    <div class="px-4 pt-3 pb-3.5"><div class="skeleton h-3.5 w-3/5"></div><div class="skeleton h-3 w-4/5 mt-2"></div></div></li>`;
+  results.innerHTML = `<ul class="grid grid-cols-1 medium:grid-cols-2 expanded:grid-cols-4 gap-4">${card.repeat(8)}</ul>`;
+}
+
+function renderError(msg) {
+  results.setAttribute('aria-busy', 'false');
+  countEl.textContent = '';
+  results.innerHTML = `<div class="text-center py-16 px-4" role="alert">
+    <div class="w-14 h-14 rounded-2xl bg-error-cont text-on-error-cont grid place-items-center mx-auto mb-4">
+      <svg class="icon icon-lg" aria-hidden="true"><use href="#i-alert"/></svg></div>
+    <h2 class="text-lg font-semibold mb-1">Couldn't load recordings</h2>
+    <p class="text-on-surface-variant mb-4">${esc(msg)} Check that GoldenEye is running, then try again.</p>
+    <button type="button" class="btn btn-outlined" onclick="loadRecordings()">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#i-retry"/></svg>Try again</button></div>`;
+}
+
+function renderEmpty(isToday) {
+  countEl.textContent = 'No recordings';
+  const who = camSelect.value ? esc(camName(camSelect.value)) : 'any camera';
+  const day = dayStart().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  results.innerHTML = `<div class="text-center py-16 px-4">
+    <div class="w-14 h-14 rounded-2xl bg-surface-cont text-on-surface-variant grid place-items-center mx-auto mb-4">
+      <svg class="icon icon-lg" aria-hidden="true"><use href="#i-film"/></svg></div>
+    <h2 class="text-lg font-semibold mb-1">No recordings for ${who} on ${esc(day)}</h2>
+    ${isToday
+      ? `<p class="text-on-surface-variant">New recordings show up here a few minutes after they're made.</p>`
+      : `<p class="text-on-surface-variant mb-4">The camera may have been off. Try another day.</p>
+         <button type="button" class="btn btn-outlined" onclick="dateInput.value=localISODate(new Date());loadRecordings()">Go to today</button>`}
+  </div>`;
 }
 
 // ── Grid view ────────────────────────────────────────────────────────────────
-
-function renderGrid(items) {
-  const cards = items.map(r => {
-    const camName = _camNames[r.camera_id] || 'Unknown';
-    const started = new Date(r.started_at).toLocaleString();
-    const size    = r.size_bytes ? (r.size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '—';
-    const dur     = r.duration_secs ? fmtDuration(r.duration_secs) : '—';
-
+function renderGrid() {
+  // Newest first in the grid; the timeline reads left to right instead.
+  const cards = items.slice().reverse().map(r => {
+    const name = esc(camName(r.camera_id));
+    const range = esc(recRange(r));
     const thumb = r.has_thumbnail
-      ? `<img src="${r.thumbnail_url}" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">`
-      : `<div class="w-full h-full flex items-center justify-center">
-           <svg class="w-10 h-10 text-white/20" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
-             <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-           </svg>
-         </div>`;
-
-    return `<div class="bg-neu-base shadow-neu rounded-[32px] overflow-hidden hover:shadow-neu-hover hover:-translate-y-0.5 transition-all duration-300">
-      <div class="relative aspect-video bg-[#1a1f26] shadow-neu-inset-deep">
-        ${thumb}
-      </div>
-      <div class="p-5">
-        <p class="font-display font-bold text-neu-fg text-sm truncate">${camName}</p>
-        <p class="text-neu-muted text-xs mt-1">${started}</p>
-        <div class="flex items-center justify-between mt-4">
-          <span class="text-neu-muted text-xs">${size} · ${dur}</span>
-          <button onclick="playRecording(${r.id}, '${camName} · ${started}')"
-            class="px-4 py-2 rounded-xl bg-neu-base shadow-neu-sm text-neu-accent font-medium text-sm hover:shadow-neu hover:-translate-y-px active:shadow-neu-inset-sm active:translate-y-px transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-            ▶ Play
-          </button>
+      ? `<img src="${esc(r.thumbnail_url)}" alt="" loading="lazy" class="absolute inset-0" onerror="this.remove()">`
+      : '';
+    return `<li>
+      <button type="button" class="group card w-full text-left hover:border-outline" onclick="playRecording(${Number(r.id)})"
+              aria-label="Play ${name}, ${range}, ${fmtSize(r.size_bytes)}">
+        <div class="well">
+          <div class="absolute inset-0 bg-surface-high"></div>
+          ${thumb}
+          <div class="absolute inset-0 grid place-items-center">
+            <span class="w-12 h-12 rounded-full grid place-items-center bg-black/55 text-white group-hover:bg-primary group-hover:text-on-primary transition-colors">
+              <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></span></div>
+          <span class="absolute right-2 bottom-2 px-1.5 rounded bg-black/70 text-white text-xs leading-5 tnum">${fmtDuration(r.duration_secs)}</span>
         </div>
-      </div>
-    </div>`;
+        <div class="px-4 pt-3 pb-3.5">
+          <p class="font-semibold truncate">${name}</p>
+          <p class="text-xs text-on-surface-variant mt-0.5 tnum">${range} · ${fmtSize(r.size_bytes)}${r.has_thumbnail ? '' : ' · No preview'}</p>
+        </div>
+      </button></li>`;
   }).join('');
-
-  document.getElementById('recordings-list').innerHTML =
-    `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">${cards}</div>`;
+  results.innerHTML = `<ul class="grid grid-cols-1 medium:grid-cols-2 expanded:grid-cols-4 gap-4" aria-label="Recordings">${cards}</ul>`;
 }
 
-// ── Timeline view ─────────────────────────────────────────────────────────────
+function playRecording(id) {
+  const r = items.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('play-title').textContent = camName(r.camera_id) + ' · ' + recRange(r);
+  const v = document.getElementById('play-video');
+  v.src = '/vod/' + id;
+  document.getElementById('play-dialog').showModal();
+  v.play().catch(() => {});
+}
+document.getElementById('play-dialog').addEventListener('close', () => {
+  const v = document.getElementById('play-video');
+  v.pause(); v.removeAttribute('src'); v.load();
+});
 
-function renderTimeline(items) {
-  const date = document.getElementById('filter-date').value;
-  const dayStart = date ? new Date(date + 'T00:00:00') : new Date();
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(dayStart);
-  dayEnd.setHours(23, 59, 59, 999);
-  const dayMs = 24 * 60 * 60 * 1000;
+// ── Timeline view ────────────────────────────────────────────────────────────
+let byCam = {};          // camera_id -> recordings sorted by start
+let playing = null;      // { camId, rec }
+let keySeekTimer;
 
-  // Group by camera.
-  const byCam = {};
-  for (const r of items) {
-    if (!byCam[r.camera_id]) byCam[r.camera_id] = [];
-    byCam[r.camera_id].push(r);
+function secInDay(r) { return (recStart(r) - dayStart()) / 1000; }
+
+function renderTimeline() {
+  byCam = {};
+  for (const r of items) (byCam[r.camera_id] ||= []).push(r);
+
+  let hours = '';
+  for (let h = 1; h < 24; h++) hours += `<i class="tl-hour" style="left:${(h / 24 * 100).toFixed(3)}%"></i>`;
+  let axis = '';
+  for (let h = 0; h <= 24; h += 3) {
+    const pos = h === 0 ? 'translate-x-0' : h === 24 ? '-translate-x-full' : '-translate-x-1/2';
+    axis += `<span class="absolute ${pos} ${h % 6 ? 'hidden medium:inline' : ''}" style="left:${h / 24 * 100}%">${String(h).padStart(2, '0')}:00</span>`;
   }
 
-  // Hour tick marks.
-  const hourTicks = Array.from({length: 25}, (_, i) => {
-    const pct = (i / 24) * 100;
-    const label = i === 24 ? '' : (i < 10 ? '0' + i : '' + i) + ':00';
-    return `<div class="absolute top-0 bottom-0 flex flex-col items-center" style="left:${pct}%">
-      <div class="w-px h-full bg-neu-fg/10"></div>
-      ${label ? `<span class="absolute -top-5 text-[10px] text-neu-muted -translate-x-1/2">${label}</span>` : ''}
-    </div>`;
-  }).join('');
-
-  const camRows = Object.entries(byCam).map(([camId, recs]) => {
-    const camName = _camNames[camId] || 'Unknown';
-    const segments = recs.map(r => {
-      const start = new Date(r.started_at);
-      const dur   = r.duration_secs || 300;
-      const end   = new Date(start.getTime() + dur * 1000);
-      const left  = Math.max(0, (start - dayStart) / dayMs) * 100;
-      const width = Math.min(100 - left, ((end - start) / dayMs) * 100);
-      if (width <= 0) return '';
-      const title = new Date(r.started_at).toLocaleTimeString() + ' · ' + fmtDuration(dur);
-      return `<div
-        class="absolute top-1 bottom-1 rounded-lg bg-neu-accent/80 hover:bg-neu-accent cursor-pointer transition-colors"
-        style="left:${left.toFixed(3)}%;width:${Math.max(width, 0.3).toFixed(3)}%"
-        title="${title}"
-        onclick="playAtTimestamp(${r.id}, '${camName}', ${Math.round((start - dayStart) / 1000)}, 0)"
-      ></div>`;
+  const rows = Object.entries(byCam).map(([camId, recs]) => {
+    const name = esc(camName(camId));
+    const segs = recs.map(r => {
+      const left = Math.max(0, secInDay(r) / DAY_SECS * 100);
+      const width = Math.min(100 - left, recDur(r) / DAY_SECS * 100);
+      return width > 0 ? `<i class="tl-seg" style="left:${left.toFixed(3)}%;width:${Math.max(width, 0.3).toFixed(3)}%"></i>` : '';
     }).join('');
-
-    return `<div class="flex items-stretch gap-4 mb-3">
-      <div class="w-28 flex-shrink-0 flex items-center">
-        <span class="text-xs font-semibold text-neu-fg truncate">${camName}</span>
-      </div>
-      <div class="flex-1 relative bg-neu-base shadow-neu-inset rounded-xl overflow-hidden" style="height:40px">
-        <div class="absolute inset-0">${hourTicks}</div>
-        ${segments}
-        <!-- Playhead -->
-        <div id="playhead-${camId}" class="absolute top-0 bottom-0 w-0.5 bg-red-400 cursor-col-resize z-10 hidden" style="left:0%">
-          <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-400 shadow-md"></div>
-        </div>
-      </div>
-    </div>`;
+    return `<div class="grid grid-cols-1 medium:grid-cols-[8rem_1fr] gap-x-3 gap-y-1 items-center mb-5 medium:mb-3">
+      <span class="font-semibold text-[0.8125rem] truncate" id="tl-label-${esc(camId)}">${name}</span>
+      <div class="tl-track" data-cam="${esc(camId)}" tabindex="0" role="slider"
+           aria-labelledby="tl-label-${esc(camId)}" aria-valuemin="0" aria-valuemax="${DAY_SECS - 1}" aria-valuenow="0" aria-valuetext="No time selected">
+        ${hours}${segs}
+        <i class="tl-head"><span class="tl-tip tnum"></span></i>
+      </div></div>`;
   }).join('');
 
-  const html = `
-    <div class="bg-neu-base shadow-neu rounded-[32px] p-6">
-      <div class="mb-4 pl-32 text-xs text-neu-muted">
-        ${new Date(dayStart).toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'})}
-      </div>
-      <div class="pl-0">${camRows}</div>
+  const day = dayStart().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  results.innerHTML = `<section class="card p-4 medium:px-5 medium:pb-5" aria-label="Timeline">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h2 class="font-semibold">${esc(day)}</h2>
+      <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-on-surface-variant">
+        <span><i class="inline-block w-3 h-3 rounded-sm bg-primary/85 mr-1.5 align-[-2px]"></i>Recorded</span>
+        <span><i class="inline-block w-3 h-3 rounded-sm bg-surface-cont border border-outline-variant mr-1.5 align-[-2px]"></i>Gap</span>
+        <span class="hidden medium:inline">Click or drag to scrub. Arrow keys step 1 min, Page Up/Down 10 min.</span>
+      </p>
     </div>
-    <!-- Timeline inline player -->
-    <div id="tl-player-wrap" class="hidden mt-6 bg-neu-base shadow-neu rounded-[32px] overflow-hidden">
-      <div class="flex items-center justify-between px-6 py-4">
-        <span id="tl-player-title" class="font-display font-semibold text-neu-fg truncate"></span>
-        <button onclick="closeTlPlayer()"
-          class="w-9 h-9 rounded-xl bg-neu-base shadow-neu-sm flex items-center justify-center text-neu-muted hover:text-neu-fg hover:shadow-neu active:shadow-neu-inset-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-neu-accent">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-      <div class="shadow-neu-inset-deep mx-4 mb-4 rounded-2xl overflow-hidden bg-[#1a1f26]">
-        <video id="tl-video" controls class="w-full max-h-[65vh]"></video>
-      </div>
-    </div>`;
+    <div class="grid grid-cols-1 medium:grid-cols-[8rem_1fr] gap-x-3 mb-1.5">
+      <span class="hidden medium:block"></span>
+      <div class="relative h-4 text-[0.6875rem] text-on-surface-variant tnum" aria-hidden="true">${axis}</div>
+    </div>
+    ${rows}</section>`;
 
-  document.getElementById('recordings-list').innerHTML = html;
-
-  // Wire up drag-to-scrub on each playhead.
-  Object.keys(byCam).forEach(camId => {
-    setupPlayheadDrag(camId, byCam[camId], dayStart, dayMs);
-  });
+  results.querySelectorAll('.tl-track').forEach(wireTrack);
 }
 
-function setupPlayheadDrag(camId, recs, dayStart, dayMs) {
-  // Find the timeline bar element for this camera row.
-  const playhead = document.getElementById('playhead-' + camId);
-  if (!playhead) return;
-  const bar = playhead.parentElement;
+// moveHead positions a track's playhead without seeking.
+function moveHead(track, sec) {
+  sec = Math.max(0, Math.min(DAY_SECS - 1, Math.round(sec)));
+  const head = track.querySelector('.tl-head');
+  head.style.display = 'block';
+  head.style.left = (sec / DAY_SECS * 100).toFixed(3) + '%';
+  head.querySelector('.tl-tip').textContent = fmtSecInDay(sec);
+  track.setAttribute('aria-valuenow', String(sec));
+  track.setAttribute('aria-valuetext', fmtSecInDay(sec));
+  track.dataset.sec = String(sec);
+  return sec;
+}
 
-  bar.addEventListener('click', e => {
-    const rect = bar.getBoundingClientRect();
-    const pct  = (e.clientX - rect.left) / rect.width;
-    const secInDay = Math.floor(pct * 86400);
-    seekToTimeInDay(camId, recs, dayStart, dayMs, pct, secInDay);
+// Pointer events cover mouse, touch and pen. Listeners live on the track, so
+// re-rendering drops them with the element. The video seeks once, on release.
+function wireTrack(track) {
+  const camId = track.dataset.cam;
+  const secAt = (e) => {
+    const rect = track.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * DAY_SECS;
+  };
+  track.addEventListener('pointerdown', (e) => {
+    track.setPointerCapture(e.pointerId);
+    track.dataset.dragging = '1';
+    moveHead(track, secAt(e));
   });
+  track.addEventListener('pointermove', (e) => {
+    if (track.dataset.dragging) moveHead(track, secAt(e));
+  });
+  const release = () => {
+    if (!track.dataset.dragging) return;
+    delete track.dataset.dragging;
+    seekTo(camId, Number(track.dataset.sec));
+  };
+  track.addEventListener('pointerup', release);
+  track.addEventListener('pointercancel', release);
 
-  let dragging = false;
-  playhead.addEventListener('mousedown', e => {
-    dragging = true;
+  track.addEventListener('keydown', (e) => {
+    const cur = track.dataset.sec ? Number(track.dataset.sec) : (byCam[camId][0] ? secInDay(byCam[camId][0]) : 0);
+    const steps = { ArrowLeft: -60, ArrowDown: -60, ArrowRight: 60, ArrowUp: 60, PageDown: -600, PageUp: 600 };
+    let next;
+    if (e.key in steps) next = cur + steps[e.key];
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = DAY_SECS - 1;
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); clearTimeout(keySeekTimer); seekTo(camId, cur); return; }
+    else return;
     e.preventDefault();
+    const sec = moveHead(track, next);
+    clearTimeout(keySeekTimer);
+    keySeekTimer = setTimeout(() => seekTo(camId, sec), 500);
   });
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const rect = bar.getBoundingClientRect();
-    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    playhead.style.left = (pct * 100).toFixed(3) + '%';
-    playhead.classList.remove('hidden');
-    const secInDay = Math.floor(pct * 86400);
-    seekToTimeInDay(camId, recs, dayStart, dayMs, pct, secInDay);
-  });
-  document.addEventListener('mouseup', () => { dragging = false; });
-
-  // Touch support.
-  bar.addEventListener('touchstart', e => {
-    const touch = e.touches[0];
-    const rect  = bar.getBoundingClientRect();
-    const pct   = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
-    playhead.style.left = (pct * 100).toFixed(3) + '%';
-    playhead.classList.remove('hidden');
-    seekToTimeInDay(camId, recs, dayStart, dayMs, pct, Math.floor(pct * 86400));
-  }, {passive: true});
 }
 
-function seekToTimeInDay(camId, recs, dayStart, dayMs, pct, secInDay) {
-  const targetMs = dayStart.getTime() + secInDay * 1000;
-  const camName  = _camNames[camId] || 'Unknown';
-
-  // Find the recording segment that covers targetMs.
-  let best = null;
-  for (const r of recs) {
-    const start = new Date(r.started_at).getTime();
-    const dur   = (r.duration_secs || 300) * 1000;
-    const end   = start + dur;
-    if (targetMs >= start && targetMs <= end) {
-      best = { r, offsetSecs: (targetMs - start) / 1000 };
-      break;
-    }
-    // Track closest segment that started before target.
-    if (start <= targetMs) {
-      if (!best || start > new Date(best.r.started_at).getTime()) {
-        best = { r, offsetSecs: Math.min((targetMs - start) / 1000, r.duration_secs || 300) };
-      }
-    }
-  }
-
-  if (!best) return;
-  playAtTimestamp(best.r.id, camName, secInDay, best.offsetSecs);
-
-  // Move playhead.
-  const playhead = document.getElementById('playhead-' + camId);
-  if (playhead) {
-    playhead.style.left = (pct * 100).toFixed(3) + '%';
-    playhead.classList.remove('hidden');
-  }
+// seekTo plays the segment covering sec; in a gap it snaps to the next segment.
+function seekTo(camId, sec) {
+  const recs = byCam[camId] || [];
+  let target = recs.find(r => sec >= secInDay(r) && sec < secInDay(r) + recDur(r));
+  let offset = target ? sec - secInDay(target) : 0;
+  if (!target) target = recs.find(r => secInDay(r) > sec);
+  if (!target && recs.length) { target = recs[recs.length - 1]; offset = 0; }
+  if (target) playSegment(camId, target, offset);
 }
 
-function playAtTimestamp(id, camName, secInDay, offsetSecs) {
-  const h = String(Math.floor(secInDay / 3600)).padStart(2,'0');
-  const m = String(Math.floor((secInDay % 3600) / 60)).padStart(2,'0');
-  const title = camName + ' · ' + h + ':' + m;
-
-  const wrap  = document.getElementById('tl-player-wrap');
+function playSegment(camId, rec, offset) {
+  playing = { camId, rec };
+  const wrap = document.getElementById('tl-player');
   const video = document.getElementById('tl-video');
-  const titleEl = document.getElementById('tl-player-title');
+  document.getElementById('tl-cam').textContent = camName(camId);
+  document.getElementById('tl-seg').textContent = recRange(rec) + ' · ' + fmtSize(rec.size_bytes);
+  const recs = byCam[camId];
+  const i = recs.indexOf(rec);
+  document.getElementById('tl-prev').disabled = i <= 0;
+  document.getElementById('tl-next').disabled = i >= recs.length - 1;
 
-  titleEl.textContent = title;
-  video.src = '/vod/' + id;
-  video.load();
-  video.addEventListener('loadedmetadata', function seek() {
-    video.currentTime = offsetSecs;
-    video.play().catch(() => {});
-    video.removeEventListener('loadedmetadata', seek);
-  });
-
+  const wasHidden = wrap.classList.contains('hidden');
   wrap.classList.remove('hidden');
-  wrap.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  video.src = '/vod/' + rec.id;
+  video.addEventListener('loadedmetadata', () => {
+    video.currentTime = Math.min(offset, Math.max(0, video.duration - 0.5));
+    video.play().catch(() => {});
+  }, { once: true });
+  updateNowPlaying();
+  if (wasHidden) wrap.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+function updateNowPlaying() {
+  if (!playing) return;
+  const video = document.getElementById('tl-video');
+  const sec = secInDay(playing.rec) + (video.currentTime || 0);
+  document.getElementById('tl-time').textContent = fmtSecInDay(sec, true);
+  const track = results.querySelector(`.tl-track[data-cam="${CSS.escape(String(playing.camId))}"]`);
+  if (track && !track.dataset.dragging && document.activeElement !== track) moveHead(track, sec);
+}
+
+function stepSegment(delta) {
+  if (!playing) return;
+  const recs = byCam[playing.camId];
+  const next = recs[recs.indexOf(playing.rec) + delta];
+  if (next) playSegment(playing.camId, next, 0);
 }
 
 function closeTlPlayer() {
+  playing = null;
   const video = document.getElementById('tl-video');
-  video.pause();
-  video.src = '';
-  document.getElementById('tl-player-wrap').classList.add('hidden');
+  video.pause(); video.removeAttribute('src'); video.load();
+  document.getElementById('tl-player').classList.add('hidden');
 }
 
-// ── Modal playback ────────────────────────────────────────────────────────────
+const tlVideo = document.getElementById('tl-video');
+tlVideo.addEventListener('timeupdate', updateNowPlaying);
+tlVideo.addEventListener('ended', () => stepSegment(1)); // continue into the next segment
 
-function playRecording(id, title) {
-  document.getElementById('play-title').textContent = title;
-  document.getElementById('play-video').src = '/vod/' + id;
-  document.getElementById('play-modal').classList.remove('hidden');
-}
-
-function closePlay() {
-  const v = document.getElementById('play-video');
-  v.pause();
-  v.src = '';
-  document.getElementById('play-modal').classList.add('hidden');
-}
-
-// ── Utils ─────────────────────────────────────────────────────────────────────
-
-function fmtDuration(secs) {
-  if (!secs) return '—';
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) return h + 'h ' + m + 'm';
-  if (m > 0) return m + 'm ' + s + 's';
-  return s + 's';
-}
+// ── Init ─────────────────────────────────────────────────────────────────────
+dateInput.max = localISODate(new Date());
+dateInput.value = localISODate(new Date());
+dateInput.addEventListener('change', loadRecordings);
+camSelect.addEventListener('change', loadRecordings);
+setView(view);
+loadRecordings();
 </script>
 {{end}}
